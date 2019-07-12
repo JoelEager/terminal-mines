@@ -44,17 +44,6 @@ class Minefield:
     def __repr__(self):
         return "{}({}, {})".format(type(self).__name__, self.width, self.height)
 
-    def __str__(self):
-        if self.state == GameState.WON:
-            status_desc = "Game won"
-        elif self.state == GameState.LOST:
-            status_desc = "Game lost"
-        else:
-            status_desc = "Flags remaining: {}".format(self.flags_remaining)
-
-        return "\n".join(" ".join(cell.state.value for cell in self.rows[y]) for y in range(self.height)) + "\n" + \
-               status_desc
-
     def get_cell(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
             return self.rows[y][x]
