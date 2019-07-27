@@ -1,6 +1,8 @@
-from .game_model import GameState, CellState
+from itertools import chain
+
 from click import clear, style, echo
-from sys import exit
+
+from .game_model import GameState, CellState
 
 color_mapping = {
     CellState.FLAG: "bright_green",
@@ -27,18 +29,20 @@ def render(minefield, x, y):
 
         return style(state.value, bg=bg, fg=fg)
 
-    echo(chr(0x250C) + chr(0x2500) * (minefield.width * 2 + 1) + chr(0x2510))
-    for iter_y in range(minefield.height):
-        echo(chr(0x2502) + " " + " ".join(render_cell(iter_x, iter_y) for iter_x in range(minefield.width)) + " " +
-             chr(0x2502))
-    echo(chr(0x2514) + chr(0x2500) * (minefield.width * 2 + 1) + chr(0x2518))
+    def gen_lines():
+        yield chr(0x250C) + chr(0x2500) * (minefield.width * 2 + 1) + chr(0x2510)
 
-    if minefield.state == GameState.WON:
-        echo(" Game won")
-    elif minefield.state == GameState.LOST:
-        echo(" Game lost")
-    else:
-        echo(" Flags remaining: {}".format(minefield.flags_remaining))
+        for iter_y in range(minefield.height):
+            iter_cells = (render_cell(iter_x, iter_y) for iter_x in range(minefield.width))
+            yield " ".join(chain(chr(0x2502), iter_cells, chr(0x2502)))
 
-    if minefield.state != GameState.IN_PROGRESS:
-        exit(0)
+        yield chr(0x2514) + chr(0x2500) * (minefield.width * 2 + 1) + chr(0x2518)
+
+        if minefield.state == GameState.WON:
+            yield " Game won"
+        elif minefield.state == GameState.LOST:
+            yield " Game lost"
+        else:
+            yield " Flags remaining: {}".format(minefield.flags_remaining)
+
+    echo("\n".join(gen_lines()))

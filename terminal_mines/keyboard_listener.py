@@ -1,5 +1,6 @@
-import click
 from enum import Enum
+
+import click
 
 
 class ArrowKeyMapping(Enum):

@@ -1,4 +1,6 @@
-from terminal_mines import Minefield, input_loop, render
+from sys import exit
+
+from terminal_mines import Minefield, GameState, input_loop, render
 
 minefield = Minefield(10, 10, {"3,3", "8,8", "5,2", "0,4", "6,0"})
 
@@ -23,6 +25,9 @@ def handle_key(key):
         minefield.reveal_cell(x, y)
 
     render(minefield, x, y)
+
+    if minefield.state != GameState.IN_PROGRESS:
+        exit(0)
 
 
 render(minefield, x, y)
