@@ -4,7 +4,7 @@ from click import clear, style, echo
 
 from .game_model import GameState, CellState
 
-color_mapping = {
+fg_mapping = {
     CellState.FLAG: "bright_green",
     CellState.WARN1: "bright_cyan",
     CellState.WARN2: "cyan",
@@ -12,8 +12,8 @@ color_mapping = {
     CellState.WARN4: "bright_magenta",
     CellState.WARN5: "magenta",
     CellState.WARN6: "bright_yellow",
-    CellState.WARN7: "bright_yellow",
-    CellState.WARN8: "bright_yellow",
+    CellState.WARN7: "red",
+    CellState.WARN8: "red",
     CellState.EXPLODED: "bright_red"
 }
 
@@ -22,12 +22,19 @@ def render(minefield, x, y):
     clear()
 
     def render_cell(iter_x, iter_y):
-        state = minefield.get_cell(iter_x, iter_y).state
+        cell = minefield.get_cell(iter_x, iter_y)
 
-        bg = "red" if iter_x == x and iter_y == y else None
-        fg = color_mapping.get(state, None)
+        fg = fg_mapping.get(cell.state, None)
 
-        return style(state.value, bg=bg, fg=fg)
+        if iter_x == x and iter_y == y:
+            fg = "black"
+            bg = "green"
+        elif minefield.state != GameState.IN_PROGRESS and cell.state == CellState.FLAG:
+            bg = None if cell.is_mine else "red"
+        else:
+            bg = None
+
+        return style(cell.state.value, bg=bg, fg=fg)
 
     def gen_lines():
         yield chr(0x250C) + chr(0x2500) * (minefield.width * 2 + 1) + chr(0x2510)
