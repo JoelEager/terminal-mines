@@ -1,5 +1,5 @@
 from .game_model import GameState, CellState
-from click import clear, style
+from click import clear, style, echo
 from sys import exit
 
 color_mapping = {
@@ -27,15 +27,18 @@ def render(minefield, x, y):
 
         return style(state.value, bg=bg, fg=fg)
 
-    print("\n".join(" ".join(render_cell(iter_x, iter_y) for iter_x in range(minefield.width))
-                    for iter_y in range(minefield.height)))
+    echo(chr(0x250C) + chr(0x2500) * (minefield.width * 2 + 1) + chr(0x2510))
+    for iter_y in range(minefield.height):
+        echo(chr(0x2502) + " " + " ".join(render_cell(iter_x, iter_y) for iter_x in range(minefield.width)) + " " +
+             chr(0x2502))
+    echo(chr(0x2514) + chr(0x2500) * (minefield.width * 2 + 1) + chr(0x2518))
 
     if minefield.state == GameState.WON:
-        print("Game won")
+        echo(" Game won")
     elif minefield.state == GameState.LOST:
-        print("Game lost")
+        echo(" Game lost")
     else:
-        print("Flags remaining: {}".format(minefield.flags_remaining))
+        echo(" Flags remaining: {}".format(minefield.flags_remaining))
 
     if minefield.state != GameState.IN_PROGRESS:
         exit(0)
