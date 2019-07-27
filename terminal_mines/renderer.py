@@ -5,7 +5,7 @@ from click import clear, style, echo
 from .game_model import GameState, CellState
 
 fg_mapping = {
-    CellState.FLAG: "bright_green",
+    CellState.FLAGGED: "bright_green",
     CellState.WARN1: "bright_cyan",
     CellState.WARN2: "cyan",
     CellState.WARN3: "bright_blue",
@@ -27,10 +27,10 @@ def render(minefield, x, y):
         fg = fg_mapping.get(cell.state, None)
 
         if iter_x == x and iter_y == y:
-            fg = "black"
             bg = "green"
-        elif minefield.state != GameState.IN_PROGRESS and cell.state == CellState.FLAG:
-            bg = None if cell.is_mine else "red"
+            fg = "black"    # Override the foreground color to make it more readable against the green background
+        elif minefield.state != GameState.IN_PROGRESS and cell.state == CellState.FLAGGED:
+            bg = None if cell.is_mine else "red"    # Indicates incorrectly placed flag
         else:
             bg = None
 

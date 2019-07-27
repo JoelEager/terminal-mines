@@ -1,3 +1,7 @@
+"""
+Models the game state and exposes functions for manipulating it.
+"""
+
 from enum import Enum
 from random import randint
 
@@ -13,7 +17,7 @@ class CellState(Enum):
     WARN6 = "6"
     WARN7 = "7"
     WARN8 = "8"
-    FLAG = "F"
+    FLAGGED = "F"
     EXPLODED = "X"
 
 
@@ -25,6 +29,9 @@ class GameState(Enum):
 
 class Cell:
     def __init__(self, is_mine):
+        """
+        The state is shown to the user while the is_mine value is used internally.
+        """
         self.is_mine = is_mine
         self.state = CellState.UNKNOWN
 
@@ -34,6 +41,9 @@ class Cell:
 
 class Minefield:
     def __init__(self, width, height, mines):
+        """
+        The mines arg must be a set of strings of the form "x,y".
+        """
         self.width = width
         self.height = height
         self.state = GameState.IN_PROGRESS
@@ -54,7 +64,7 @@ class Minefield:
 
     @property
     def flags_remaining(self):
-        return self.num_mines - len([cell for cell in self.cells if cell.state == CellState.FLAG])
+        return self.num_mines - len([cell for cell in self.cells if cell.state == CellState.FLAGGED])
 
     def get_cell(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
@@ -76,6 +86,7 @@ class Minefield:
             return
 
         if target.is_mine:
+            # Game lost; update all un-flagged mines as exploded
             target.state = CellState.EXPLODED
             
             for cell in self.cells:
@@ -89,6 +100,7 @@ class Minefield:
             if neighbor_mines == 0:
                 target.state = CellState.SAFE
 
+                # Use recursion to propagate the reveal to neighboring cells
                 for offset_x, offset_y in ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)):
                     try:
                         self.reveal_cell(x + offset_x, y + offset_y)
@@ -98,26 +110,30 @@ class Minefield:
                 target.state = CellState(str(neighbor_mines))
                 
     def flag_cell(self, x, y):
+        """
+        Toggles a cell between the unknown and flagged states.
+        """
         target = self.get_cell(x, y)
 
-        if target.state == CellState.FLAG:
+        if target.state == CellState.FLAGGED:
             target.state = CellState.UNKNOWN
-            return
-        elif target.state != CellState.UNKNOWN or self.flags_remaining == 0:
-            return
+        elif target.state == CellState.UNKNOWN and self.flags_remaining > 0:
+            target.state = CellState.FLAGGED
 
-        target.state = CellState.FLAG
+            # Check if the game has been won
+            for cell in self.cells:
+                if cell.is_mine and cell.state != CellState.FLAGGED:
+                    return
+                elif not cell.is_mine and cell.state == CellState.FLAGGED:
+                    return
 
-        for cell in self.cells:
-            if cell.is_mine and cell.state != CellState.FLAG:
-                return
-            elif not cell.is_mine and cell.state == CellState.FLAG:
-                return
-
-        self.state = GameState.WON
+            self.state = GameState.WON
 
 
 def random_minefield(num_mines, width, height):
+    """
+    :return: A new Minefield instance with a random set of mines.
+    """
     mines = set()
 
     while len(mines) != num_mines:
