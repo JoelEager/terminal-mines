@@ -23,15 +23,6 @@ class GameState(Enum):
     LOST = 2
 
 
-def plant_mines(num_mines, width, height):
-    mines = set()
-
-    while len(mines) != num_mines:
-        mines.add("{},{}".format(randint(0, width - 1), randint(0, height - 1)))
-
-    return mines
-
-
 class Cell:
     def __init__(self, is_mine):
         self.is_mine = is_mine
@@ -42,19 +33,28 @@ class Cell:
 
 
 class Minefield:
-    def __init__(self, num_mines, width, height):
+    def __init__(self, width, height, mines):
         self.width = width
         self.height = height
-
-        mines = plant_mines(num_mines, width, height)
-
-        self.rows = [[Cell("{},{}".format(x, y) in mines) for x in range(width)] for y in range(height)]
-        self.flags_remaining = num_mines
-
         self.state = GameState.IN_PROGRESS
+        self.rows = [[Cell("{},{}".format(x, y) in mines) for x in range(width)] for y in range(height)]
 
     def __repr__(self):
         return "{}({}, {})".format(type(self).__name__, self.width, self.height)
+
+    @property
+    def cells(self):
+        for row in self.rows:
+            for cell in row:
+                yield cell
+
+    @property
+    def num_mines(self):
+        return len([cell for cell in self.cells if cell.is_mine])
+
+    @property
+    def flags_remaining(self):
+        return self.num_mines - len([cell for cell in self.cells if cell.state == CellState.FLAG])
 
     def get_cell(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
@@ -62,7 +62,7 @@ class Minefield:
         else:
             raise IndexError
 
-    def iter_neighbors(self, x, y):
+    def neighbors(self, x, y):
         for offset_x, offset_y in ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)):
             try:
                 yield self.get_cell(x + offset_x, y + offset_y)
@@ -78,14 +78,13 @@ class Minefield:
         if target.is_mine:
             target.state = CellState.EXPLODED
             
-            for row in self.rows:
-                for cell in row:
-                    if cell.state == CellState.UNKNOWN and cell.is_mine:
-                        cell.state = CellState.EXPLODED
+            for cell in self.cells:
+                if cell.state == CellState.UNKNOWN and cell.is_mine:
+                    cell.state = CellState.EXPLODED
                         
             self.state = GameState.LOST
         else:
-            neighbor_mines = len([cell for cell in self.iter_neighbors(x, y) if cell.is_mine])
+            neighbor_mines = len([cell for cell in self.neighbors(x, y) if cell.is_mine])
 
             if neighbor_mines == 0:
                 target.state = CellState.SAFE
@@ -103,19 +102,25 @@ class Minefield:
 
         if target.state == CellState.FLAG:
             target.state = CellState.UNKNOWN
-            self.flags_remaining += 1
             return
         elif target.state != CellState.UNKNOWN or self.flags_remaining == 0:
             return
 
         target.state = CellState.FLAG
-        self.flags_remaining -= 1
 
-        for row in self.rows:
-            for cell in row:
-                if cell.is_mine and cell.state != CellState.FLAG:
-                    return
-                elif not cell.is_mine and cell.state == CellState.FLAG:
-                    return
+        for cell in self.cells:
+            if cell.is_mine and cell.state != CellState.FLAG:
+                return
+            elif not cell.is_mine and cell.state == CellState.FLAG:
+                return
 
         self.state = GameState.WON
+
+
+def random_minefield(num_mines, width, height):
+    mines = set()
+
+    while len(mines) != num_mines:
+        mines.add("{},{}".format(randint(0, width - 1), randint(0, height - 1)))
+
+    return Minefield(width, height, mines)

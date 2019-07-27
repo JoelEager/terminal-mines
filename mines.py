@@ -1,6 +1,6 @@
 from sys import exit
 
-from terminal_mines import Minefield, GameState, input_loop, render
+from terminal_mines import random_minefield, GameState, input_loop, render
 
 difficulty_presets = {
     "easy": (10, 8, 8),
@@ -8,7 +8,7 @@ difficulty_presets = {
     "expert": (99, 16, 30)
 }
 
-minefield = Minefield(*difficulty_presets["easy"])
+minefield = random_minefield(*difficulty_presets["easy"])
 
 x = 0
 y = 0
