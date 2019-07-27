@@ -2,7 +2,13 @@ from sys import exit
 
 from terminal_mines import Minefield, GameState, input_loop, render
 
-minefield = Minefield(10, 10, {"3,3", "8,8", "5,2", "0,4", "6,0"})
+difficulty_presets = {
+    "easy": (10, 8, 8),
+    "intermediate": (40, 16, 16),
+    "expert": (99, 16, 30)
+}
+
+minefield = Minefield(*difficulty_presets["easy"])
 
 x = 0
 y = 0

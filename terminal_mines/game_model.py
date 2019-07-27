@@ -1,4 +1,5 @@
 from enum import Enum
+from random import randint
 
 
 class CellState(Enum):
@@ -22,6 +23,15 @@ class GameState(Enum):
     LOST = 2
 
 
+def plant_mines(num_mines, width, height):
+    mines = set()
+
+    while len(mines) != num_mines:
+        mines.add("{},{}".format(randint(0, width - 1), randint(0, height - 1)))
+
+    return mines
+
+
 class Cell:
     def __init__(self, is_mine):
         self.is_mine = is_mine
@@ -32,12 +42,14 @@ class Cell:
 
 
 class Minefield:
-    def __init__(self, width, height, mines):
+    def __init__(self, num_mines, width, height):
         self.width = width
         self.height = height
 
+        mines = plant_mines(num_mines, width, height)
+
         self.rows = [[Cell("{},{}".format(x, y) in mines) for x in range(width)] for y in range(height)]
-        self.flags_remaining = len(mines)
+        self.flags_remaining = num_mines
 
         self.state = GameState.IN_PROGRESS
 
@@ -73,9 +85,9 @@ class Minefield:
                         
             self.state = GameState.LOST
         else:
-            num_mines = len([cell for cell in self.iter_neighbors(x, y) if cell.is_mine])
+            neighbor_mines = len([cell for cell in self.iter_neighbors(x, y) if cell.is_mine])
 
-            if num_mines == 0:
+            if neighbor_mines == 0:
                 target.state = CellState.SAFE
 
                 for offset_x, offset_y in ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)):
@@ -84,12 +96,16 @@ class Minefield:
                     except IndexError:
                         continue
             else:
-                target.state = CellState(str(num_mines))
+                target.state = CellState(str(neighbor_mines))
                 
     def flag_cell(self, x, y):
         target = self.get_cell(x, y)
 
-        if target.state != CellState.UNKNOWN or self.flags_remaining == 0:
+        if target.state == CellState.FLAG:
+            target.state = CellState.UNKNOWN
+            self.flags_remaining += 1
+            return
+        elif target.state != CellState.UNKNOWN or self.flags_remaining == 0:
             return
 
         target.state = CellState.FLAG
