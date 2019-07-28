@@ -46,7 +46,11 @@ class Minefield:
         """
         self.width = width
         self.height = height
+
+        self.x = 0      # The x cord of the currently selected cell
+        self.y = 0      # The y cord of the currently selected cell
         self.state = GameState.IN_PROGRESS
+
         self.rows = [[Cell("{},{}".format(x, y) in mines) for x in range(width)] for y in range(height)]
 
     def __repr__(self):

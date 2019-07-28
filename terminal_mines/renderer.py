@@ -18,7 +18,7 @@ fg_mapping = {
 }
 
 
-def render(minefield, x, y):
+def render(minefield):
     clear()
 
     def render_cell(iter_x, iter_y):
@@ -26,7 +26,7 @@ def render(minefield, x, y):
 
         fg = fg_mapping.get(cell.state, None)
 
-        if iter_x == x and iter_y == y:
+        if iter_x == minefield.x and iter_y == minefield.y:
             bg = "green"
             fg = "black"    # Override the foreground color to make it more readable against the green background
         elif minefield.state != GameState.IN_PROGRESS and cell.state == CellState.FLAGGED:
