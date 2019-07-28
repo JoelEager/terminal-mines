@@ -24,9 +24,9 @@ def main(difficulty):
             minefield.x = (minefield.x - 1) % minefield.width
         elif key == "d":
             minefield.x = (minefield.x + 1) % minefield.width
-        elif key == "e":
+        elif key == "e" or key == "'":
             minefield.flag_cell(minefield.x, minefield.y)
-        elif key == "\n":
+        elif key == "\n" or key == " ":
             minefield.reveal_cell(minefield.x, minefield.y)
 
         render(minefield)
