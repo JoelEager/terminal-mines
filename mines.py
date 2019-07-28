@@ -10,10 +10,45 @@ DIFFICULTY_PRESETS = {
 }
 
 
+class DifficultyParamType(click.ParamType):
+    """
+    Converts the provided difficulty string into the 3 args expected by random_minefield().
+    """
+    def convert(self, value, param, ctx):
+        if value in DIFFICULTY_PRESETS:
+            return DIFFICULTY_PRESETS[value]
+        elif "," not in value:
+            self.fail("'{}' is not a valid difficulty name".format(value), param, ctx)
+        else:
+            try:
+                args = tuple(map(int, value.split(",")))
+
+                if len(args) != 3:
+                    raise ValueError
+                elif args[0] < 0 or args[1] < 0 or args[2] < 0:
+                    raise ValueError
+                elif args[1] > 50 or args[2] > 50:
+                    self.fail("the game board cannot be larger than 50 cells on either side", param, ctx)
+                elif args[0] > args[1] * args[2]:
+                    self.fail("{} mines cannot fit in a board size of {} by {}".format(*args), param, ctx)
+
+                return args
+            except ValueError:
+                self.fail("a custom difficulty must be made of 3 positive integers separated by commas", param, ctx)
+
+
 @click.command()
-@click.option("-d", "--difficulty", type=click.Choice(list(DIFFICULTY_PRESETS.keys())), default="easy")
+@click.argument("difficulty", default="easy", type=DifficultyParamType())
 def main(difficulty):
-    minefield = random_minefield(*DIFFICULTY_PRESETS[difficulty])
+    """
+    Terminal Mines
+
+    A CLI port of Minesweeper in Python.
+
+    DIFFICULTY can either be "easy", "intermediate", "expert" or a custom difficulty of the form
+    "<number of mines>,<width>,<height>". If no difficulty is specified Terminal Mines will default to easy.
+    """
+    minefield = random_minefield(*difficulty)
 
     def handle_key(key):
         if key == "w":
