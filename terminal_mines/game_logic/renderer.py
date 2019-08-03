@@ -4,7 +4,7 @@ Handles the rendering of the game state to the console.
 
 from itertools import chain
 
-from click import clear, style, echo
+from click import clear, style, echo, get_current_context
 
 from .game_model import GameState, CellState
 
@@ -59,4 +59,10 @@ def render(minefield):
         else:
             yield " Flags remaining: {}".format(minefield.flags_remaining)
 
-    echo("\n".join(gen_lines()))
+    try:
+        echo("\n".join(gen_lines()))
+    except UnicodeEncodeError:
+        # The Git bash emulator on Windows doesn't play nice with unicode or the input loop. To save the user from this
+        #   we'll quit while we're ahead.
+        get_current_context().fail("terminal-mines does not support the Git bash emulator on Windows. Please use CMD "
+                                   "or PowerShell instead.")

@@ -1,7 +1,7 @@
 # terminal-mines
 A command-line clone of Minesweeper in Python.
 
-Supports Linux, Mac, and Windows on Python 3.4 or newer. Can be played in any terminal emulator with color support. 
+Supports Linux, Mac, and Windows on Python 3.4 or newer. Can be played in most terminal emulators that support colors. 
 Includes options for custom difficulties and user-specified mine placements.
 
 To install use pip:
