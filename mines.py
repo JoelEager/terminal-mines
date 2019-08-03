@@ -43,7 +43,14 @@ def main(difficulty):
     """
     Terminal Mines
 
-    A CLI port of Minesweeper in Python.
+    A command-line clone of minesweeper in Python.
+
+    \b
+    Controls:
+    - WASD or arrow keys to move the cursor
+    - Enter or space to reveal the current cell
+    - e or ' to place a flag
+    - ESC to quit
 
     DIFFICULTY can either be "easy", "intermediate", "expert" or a custom difficulty of the form
     "<number of mines>,<width>,<height>". If no difficulty is specified Terminal Mines will default to easy.
