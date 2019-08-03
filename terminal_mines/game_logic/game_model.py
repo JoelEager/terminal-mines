@@ -28,10 +28,10 @@ class GameState(Enum):
 
 
 class Cell:
+    """
+    Represents one cell on the game board. The state is shown to the user while the is_mine value is used internally.
+    """
     def __init__(self, is_mine):
-        """
-        The state is shown to the user while the is_mine value is used internally.
-        """
         self.is_mine = is_mine
         self.state = CellState.UNKNOWN
 
@@ -40,6 +40,9 @@ class Cell:
 
 
 class Minefield:
+    """
+    Stores the state of the game and the position of the cursor. Provides functions for interacting with the game.
+    """
     def __init__(self, width, height, mines):
         """
         The mines arg must be a set of strings of the form "x,y".
@@ -77,6 +80,9 @@ class Minefield:
             raise IndexError
 
     def neighbors(self, x, y):
+        """
+        Iterates over neighboring cells
+        """
         for offset_x, offset_y in ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)):
             try:
                 yield self.get_cell(x + offset_x, y + offset_y)
@@ -84,6 +90,9 @@ class Minefield:
                 continue
 
     def reveal_cell(self, x, y):
+        """
+        Reveals the given cell and updates the game state. Will recursively reveal other cells if the given one is safe.
+        """
         target = self.get_cell(x, y)
 
         if target.state != CellState.UNKNOWN:
@@ -115,7 +124,8 @@ class Minefield:
                 
     def flag_cell(self, x, y):
         """
-        Toggles a cell between the unknown and flagged states.
+        Toggles a cell between the unknown and flagged states. Does nothing if called on a revealed cell or if the
+        player is out of flags.
         """
         target = self.get_cell(x, y)
 

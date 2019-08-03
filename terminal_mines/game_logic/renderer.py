@@ -1,3 +1,7 @@
+"""
+Handles the rendering of the game state to the console.
+"""
+
 from itertools import chain
 
 from click import clear, style, echo
@@ -19,6 +23,9 @@ fg_mapping = {
 
 
 def render(minefield):
+    """
+    Clears the screen and renders the current game state.
+    """
     clear()
 
     def render_cell(iter_x, iter_y):

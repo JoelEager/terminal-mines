@@ -1,3 +1,9 @@
+"""
+An input loop based around click.getchar(). Supports arrow key escape sequences on both Unix-like platforms and Windows.
+
+When run directly this this script will enter a test loop.
+"""
+
 from enum import Enum
 
 import click
@@ -10,11 +16,10 @@ class ArrowKeyMapping(Enum):
     RIGHT = "d"
 
 
-def demo_handler(key):
-    print("Processing {}".format(repr(key)))
-
-
 def input_loop(handler_func):
+    """
+    Loops until ESC is pressed or the program is killed. Calls handler_func each time a keystroke is received.
+    """
     while True:
         try:
             ch = click.getchar()
@@ -49,6 +54,10 @@ def input_loop(handler_func):
         elif ord(ch) == 27:
             # Exit on ESC
             return
+
+
+def demo_handler(key):
+    print("Processing {}".format(repr(key)))
 
 
 if __name__ == "__main__":

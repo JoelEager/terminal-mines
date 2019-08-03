@@ -1,6 +1,10 @@
+"""
+Entry point and CLI implementation for terminal-mines.
+"""
+
 import click
 
-from terminal_mines import random_minefield, Minefield, GameState, input_loop, render
+from .game_logic import random_minefield, Minefield, GameState, input_loop, render
 
 DIFFICULTY_PRESETS = {
     "easy": (10, 8, 8),
@@ -44,7 +48,7 @@ def main(ctx, difficulty, mines_file):
     """
     Terminal Mines
 
-    A command-line clone of minesweeper in Python.
+    A command-line clone of Minesweeper in Python.
 
     \b
     Controls:
@@ -91,7 +95,3 @@ def main(ctx, difficulty, mines_file):
 
     render(minefield)
     input_loop(handle_key)
-
-
-if __name__ == "__main__":
-    main()
