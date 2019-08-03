@@ -6,7 +6,7 @@ with open("README.md") as file:
 
 setup(
     name="terminal-mines",
-    version="0.2",
+    version="1.0",
     python_requires="~=3.4",
     license="MIT",
     author="Joel Eager",
