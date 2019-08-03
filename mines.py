@@ -1,7 +1,6 @@
 import click
-from sys import exit
 
-from terminal_mines import random_minefield, GameState, input_loop, render
+from terminal_mines import random_minefield, Minefield, GameState, input_loop, render
 
 DIFFICULTY_PRESETS = {
     "easy": (10, 8, 8),
@@ -38,8 +37,10 @@ class DifficultyParamType(click.ParamType):
 
 
 @click.command()
+@click.pass_context
 @click.argument("difficulty", default="easy", type=DifficultyParamType())
-def main(difficulty):
+@click.option("mines_file", "--mines", type=click.File(), help="File containing custom mine placements.")
+def main(ctx, difficulty, mines_file):
     """
     Terminal Mines
 
@@ -54,8 +55,20 @@ def main(difficulty):
 
     DIFFICULTY can either be "easy", "intermediate", "expert" or a custom difficulty of the form
     "<number of mines>,<width>,<height>". If no difficulty is specified Terminal Mines will default to easy.
+
+    The mines file (if provided) is used to control the placement of mines. It must be a CSV where each line is of the
+    form "<x>,<y>". Both coordinates are 0-based and count from the top-left corner of the game board. If any of the
+    specified mines are outside the bounds of the game board they will be skipped. If a mines file is provided the
+    "number of mines" portion of the difficulty setting will be ignored.
     """
-    minefield = random_minefield(*difficulty)
+    if mines_file:
+        mines = set(map(lambda line: line.strip(), mines_file))
+        minefield = Minefield(difficulty[1], difficulty[2], mines)
+
+        if minefield.num_mines == 0:
+            ctx.fail("Mines file did not contain any valid mines")
+    else:
+        minefield = random_minefield(*difficulty)
 
     def handle_key(key):
         if key == "w":
@@ -74,7 +87,7 @@ def main(difficulty):
         render(minefield)
 
         if minefield.state != GameState.IN_PROGRESS:
-            exit(0)
+            ctx.exit(0)
 
     render(minefield)
     input_loop(handle_key)
