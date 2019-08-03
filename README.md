@@ -9,6 +9,8 @@ To install use pip:
 pip install terminal-mines
 ```
 
+Once installed, use the `mines` command to start a new game.
+
 **For help, controls, and usage run `mines --help` after installing.**
 
 If you'd like to set `terminal-mines` up for local development run these commands:

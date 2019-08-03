@@ -1,11 +1,12 @@
 from setuptools import setup, find_packages
 
 with open("README.md") as file:
-    long_description = file.read()
+    # Long description is the readme minus the header line
+    long_description = file.read()[17:]
 
 setup(
     name="terminal-mines",
-    version="0.1",
+    version="0.2",
     python_requires="~=3.4",
     license="MIT",
     author="Joel Eager",
