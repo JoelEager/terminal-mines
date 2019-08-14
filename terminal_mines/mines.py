@@ -7,6 +7,8 @@ import click
 from .game_logic import random_minefield, Minefield, GameState, input_loop, render
 
 DIFFICULTY_PRESETS = {
+    "balanced": (35, 20, 15),
+    # These difficulty mode are the same as those in Microsoft's minesweeper implementation
     "easy": (10, 8, 8),
     "intermediate": (40, 16, 16),
     "expert": (99, 16, 30)
@@ -42,7 +44,7 @@ class DifficultyParamType(click.ParamType):
 
 @click.command()
 @click.pass_context
-@click.argument("difficulty", default="easy", type=DifficultyParamType())
+@click.argument("difficulty", default="balanced", type=DifficultyParamType())
 @click.option("mines_file", "--mines", type=click.File(), help="File containing custom mine placements.")
 def main(ctx, difficulty, mines_file):
     """
@@ -57,8 +59,8 @@ def main(ctx, difficulty, mines_file):
     - e or ' to place a flag
     - ESC to quit
 
-    DIFFICULTY can either be "easy", "intermediate", "expert" or a custom difficulty of the form
-    "<number of mines>,<width>,<height>". If no difficulty is specified Terminal Mines will default to easy.
+    DIFFICULTY can either be "balanced", "easy", "intermediate", "expert" or a custom difficulty of the form
+    "<number of mines>,<width>,<height>". If no difficulty is specified Terminal Mines will default to balanced.
 
     The mines file (if provided) is used to control the placement of mines. It must be a CSV where each line is of the
     form "<x>,<y>". Both coordinates are 0-based and count from the top-left corner of the game board. If any of the
