@@ -77,7 +77,7 @@ def solve_game(minefield):
     render(minefield)
 
     while True:
-        sleep(0.5)
+        sleep(0.1)
 
         take_turn(minefield)
         render(minefield)
