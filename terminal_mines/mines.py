@@ -4,7 +4,7 @@ Entry point and CLI implementation for terminal-mines.
 
 import click
 
-from .game_logic import random_minefield, Minefield, GameState, input_loop, render
+from .game_logic import random_minefield, Minefield, GameState, input_loop, render, solve_game
 
 DIFFICULTY_PRESETS = {
     "balanced": (35, 20, 15),
@@ -45,8 +45,9 @@ class DifficultyParamType(click.ParamType):
 @click.command()
 @click.pass_context
 @click.argument("difficulty", default="balanced", type=DifficultyParamType())
-@click.option("mines_file", "--mines", type=click.File(), help="File containing custom mine placements.")
-def main(ctx, difficulty, mines_file):
+@click.option("--solve", is_flag=True, help="Watch the included AI attempt to solve the board.")
+@click.option("mines_file", "--mines", type=click.File(), help="Provide a file containing custom mine placements.")
+def main(ctx, difficulty, solve, mines_file):
     """
     Terminal Mines
 
@@ -76,24 +77,27 @@ def main(ctx, difficulty, mines_file):
     else:
         minefield = random_minefield(*difficulty)
 
-    def handle_key(key):
-        if key == "w":
-            minefield.y = (minefield.y - 1) % minefield.height
-        elif key == "s":
-            minefield.y = (minefield.y + 1) % minefield.height
-        elif key == "a":
-            minefield.x = (minefield.x - 1) % minefield.width
-        elif key == "d":
-            minefield.x = (minefield.x + 1) % minefield.width
-        elif key == "e" or key == "'":
-            minefield.flag_cell(minefield.x, minefield.y)
-        elif key == "\n" or key == " ":
-            minefield.reveal_cell(minefield.x, minefield.y)
+    if solve:
+        solve_game(minefield)
+    else:
+        def handle_key(key):
+            if key == "w":
+                minefield.y = (minefield.y - 1) % minefield.height
+            elif key == "s":
+                minefield.y = (minefield.y + 1) % minefield.height
+            elif key == "a":
+                minefield.x = (minefield.x - 1) % minefield.width
+            elif key == "d":
+                minefield.x = (minefield.x + 1) % minefield.width
+            elif key == "e" or key == "'":
+                minefield.flag_cell(minefield.x, minefield.y)
+            elif key == "\n" or key == " ":
+                minefield.reveal_cell(minefield.x, minefield.y)
+
+            render(minefield)
+
+            if minefield.state != GameState.IN_PROGRESS:
+                ctx.exit(0)
 
         render(minefield)
-
-        if minefield.state != GameState.IN_PROGRESS:
-            ctx.exit(0)
-
-    render(minefield)
-    input_loop(handle_key)
+        input_loop(handle_key)
