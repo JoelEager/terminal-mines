@@ -61,9 +61,22 @@ class Minefield:
 
     @property
     def cells(self):
+        """
+        Iterates over all cells from left to right followed by top to bottom. Yields the cell object.
+        """
         for row in self.rows:
             for cell in row:
                 yield cell
+
+    @property
+    def cords_and_cells(self):
+        """
+        Iterates over all cells from left to right followed by top to bottom. Yields a tuple of x pos, y pos, and the
+        cell object.
+        """
+        for y in range(self.height):
+            for x in range(self.width):
+                yield x, y, self.rows[y][x]
 
     @property
     def num_mines(self):
@@ -79,15 +92,23 @@ class Minefield:
         else:
             raise IndexError
 
+    def neighboring_cords(self, x, y):
+        """
+        Iterates over valid neighboring coordinates
+        """
+        for offset_x, offset_y in ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)):
+            neighbor_x = x + offset_x
+            neighbor_y = y + offset_y
+
+            if 0 <= neighbor_x < self.width and 0 <= neighbor_y < self.height:
+                yield neighbor_x, neighbor_y
+
     def neighbors(self, x, y):
         """
         Iterates over neighboring cells
         """
-        for offset_x, offset_y in ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)):
-            try:
-                yield self.get_cell(x + offset_x, y + offset_y)
-            except IndexError:
-                continue
+        for neighbor_x, neighbor_y in self.neighboring_cords(x, y):
+            yield self.get_cell(neighbor_x, neighbor_y)
 
     def reveal_cell(self, x, y):
         """
@@ -114,11 +135,8 @@ class Minefield:
                 target.state = CellState.SAFE
 
                 # Use recursion to propagate the reveal to neighboring cells
-                for offset_x, offset_y in ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)):
-                    try:
-                        self.reveal_cell(x + offset_x, y + offset_y)
-                    except IndexError:
-                        continue
+                for neighbor_x, neighbor_y in self.neighboring_cords(x, y):
+                    self.reveal_cell(neighbor_x, neighbor_y)
             else:
                 target.state = CellState(str(neighbor_mines))
                 
