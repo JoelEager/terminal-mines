@@ -45,7 +45,7 @@ class DifficultyParamType(click.ParamType):
 @click.command()
 @click.pass_context
 @click.argument("difficulty", default="balanced", type=DifficultyParamType())
-@click.option("--solve", is_flag=True, help="Watch the included AI attempt to solve the board.")
+@click.option("--solve", is_flag=True, help="Watch the included AI attempt to solve the minefield.")
 @click.option("mines_file", "--mines", type=click.File(), help="Provide a file containing custom mine placements.")
 def main(ctx, difficulty, solve, mines_file):
     """
