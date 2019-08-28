@@ -51,7 +51,7 @@ def main(ctx, difficulty, solve, mines_file):
     """
     Terminal Mines
 
-    A command-line take on Minesweeper in Python.
+    A command-line variant of Minesweeper in Python.
 
     \b
     Controls:
