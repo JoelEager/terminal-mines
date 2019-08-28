@@ -51,7 +51,7 @@ def main(ctx, difficulty, solve, mines_file):
     """
     Terminal Mines
 
-    A command-line clone of Minesweeper in Python.
+    A command-line take on Minesweeper in Python.
 
     \b
     Controls:
@@ -62,6 +62,9 @@ def main(ctx, difficulty, solve, mines_file):
 
     DIFFICULTY can either be "balanced", "easy", "intermediate", "expert" or a custom difficulty of the form
     "<number of mines>,<width>,<height>". If no difficulty is specified Terminal Mines will default to balanced.
+
+    Note that this version of Minesweeper does not guarantee that your first move will always be safe. Additionally, in
+    this version a "win" is defined as flagging all mines, not revealing all safe cells.
 
     The mines file (if provided) is used to control the placement of mines. It must be a CSV where each line is of the
     form "<x>,<y>". Both coordinates are 0-based and count from the top-left corner of the game board. If any of the
