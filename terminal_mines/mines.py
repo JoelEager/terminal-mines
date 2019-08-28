@@ -8,7 +8,7 @@ from .game_logic import random_minefield, Minefield, GameState, input_loop, rend
 
 DIFFICULTY_PRESETS = {
     "balanced": (35, 20, 15),
-    # These difficulty mode are the same as those in Microsoft's minesweeper implementation
+    "challenging": (70, 25, 20),
     "easy": (10, 8, 8),
     "intermediate": (40, 16, 16),
     "expert": (99, 16, 30)
@@ -60,8 +60,19 @@ def main(ctx, difficulty, solve, mines_file):
     - e or ' to place a flag
     - ESC to quit
 
-    DIFFICULTY can either be "balanced", "easy", "intermediate", "expert" or a custom difficulty of the form
-    "<number of mines>,<width>,<height>". If no difficulty is specified Terminal Mines will default to balanced.
+    DIFFICULTY can either be one of the modes listed below or a custom difficulty of the form
+    "<number of mines>,<width>,<height>". If no difficulty is specified, then Terminal Mines will default to balanced.
+
+    \b
+    Terminal Mines difficulties:
+    - balanced: A 20x15 board with 35 mines
+    - challenging: A 25x20 board with 70 mines
+
+    \b
+    Official Minesweeper difficulties:
+    - easy: A 8x8 board with 10 mines
+    - intermediate: A 16x16 board with 40 mines
+    - expert: A 16x30 board with 99 mines
 
     Note that this version of Minesweeper does not guarantee that your first move will always be safe. Additionally, in
     this version a "win" is defined as flagging all mines, not revealing all safe cells.
