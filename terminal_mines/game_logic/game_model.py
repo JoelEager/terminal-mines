@@ -122,11 +122,11 @@ class Minefield:
         if target.is_mine:
             # Game lost; update all un-flagged mines as exploded
             target.state = CellState.EXPLODED
-            
+
             for cell in self.cells:
                 if cell.state == CellState.UNKNOWN and cell.is_mine:
                     cell.state = CellState.EXPLODED
-                        
+
             self.state = GameState.LOST
         else:
             neighbor_mines = len([cell for cell in self.neighbors(x, y) if cell.is_mine])
@@ -139,7 +139,7 @@ class Minefield:
                     self.reveal_cell(neighbor_x, neighbor_y)
             else:
                 target.state = CellState(str(neighbor_mines))
-                
+
     def flag_cell(self, x, y):
         """
         Toggles a cell between the unknown and flagged states. Does nothing if called on a revealed cell or if the
