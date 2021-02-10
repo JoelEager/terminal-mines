@@ -112,7 +112,7 @@ class Minefield:
         for neighbor_x, neighbor_y in self.neighboring_cords(x, y):
             yield self.get_cell(neighbor_x, neighbor_y)
 
-    def reveal_cell(self, x, y):
+    def reveal_cell(self, x, y, recursing=False):
         """
         Reveals the given cell and updates the game state. Will recursively reveal other cells if the given one is safe.
         """
@@ -138,10 +138,19 @@ class Minefield:
 
                 # Use recursion to propagate the reveal to neighboring cells
                 for neighbor_x, neighbor_y in self.neighboring_cords(x, y):
-                    self.reveal_cell(neighbor_x, neighbor_y)
+                    self.reveal_cell(neighbor_x, neighbor_y, recursing=True)
             else:
                 target.state = CellState(str(neighbor_mines))
-                
+            
+            if not recursing and self.beta:
+                # Check if the game has been won, based on revealed cells instead of flags
+                for cell in self.cells:
+                    if not cell.is_mine and cell.state == CellState.UNKNOWN:
+                        return
+
+                self.state = GameState.WON 
+
+
     def flag_cell(self, x, y):
         """
         Toggles a cell between the unknown and flagged states. Does nothing if called on a revealed cell or if the
@@ -154,14 +163,15 @@ class Minefield:
         elif target.state == CellState.UNKNOWN and self.flags_remaining > 0:
             target.state = CellState.FLAGGED
 
-            # Check if the game has been won
-            for cell in self.cells:
-                if cell.is_mine and cell.state != CellState.FLAGGED:
-                    return
-                elif not cell.is_mine and cell.state == CellState.FLAGGED:
-                    return
+            if not self.beta:
+                # Check if the game has been won
+                for cell in self.cells:
+                    if cell.is_mine and cell.state != CellState.FLAGGED:
+                        return
+                    elif not cell.is_mine and cell.state == CellState.FLAGGED:
+                        return
 
-            self.state = GameState.WON
+                self.state = GameState.WON
 
 
 def random_minefield(num_mines, width, height):
