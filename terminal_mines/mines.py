@@ -47,7 +47,8 @@ class DifficultyParamType(click.ParamType):
 @click.argument("difficulty", default="balanced", type=DifficultyParamType())
 @click.option("--solve", is_flag=True, help="Watch the included AI attempt to solve the minefield.")
 @click.option("mines_file", "--mines", type=click.File(), help="Provide a file containing custom mine placements.")
-def main(ctx, difficulty, solve, mines_file):
+@click.option("--beta", is_flag=True, help="Enable experimental features.")
+def main(ctx, difficulty, solve, mines_file, beta):
     """
     Terminal Mines
 
@@ -90,6 +91,9 @@ def main(ctx, difficulty, solve, mines_file):
             ctx.fail("Mines file did not contain any valid mines")
     else:
         minefield = random_minefield(*difficulty)
+
+    if beta:
+        minefield.beta = beta
 
     if solve:
         solve_game(minefield)

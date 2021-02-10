@@ -56,6 +56,8 @@ class Minefield:
 
         self.rows = [[Cell("{},{}".format(x, y) in mines) for x in range(width)] for y in range(height)]
 
+        self.beta = False        # Enable beta features if set to True
+
     def __repr__(self):
         return "{}({}, {})".format(type(self).__name__, self.width, self.height)
 
