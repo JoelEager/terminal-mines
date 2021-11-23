@@ -34,17 +34,11 @@ def render(minefield):
         fg = fg_mapping.get(cell.state, None)
         bg = None
 
-        if minefield.state == GameState.IN_PROGRESS: 
-            if iter_x in [minefield.x - 1, minefield.x, minefield.x + 1] and iter_y in [minefield.y - 1, minefield.y, minefield.y + 1]:
-                if minefield.beta:
-                    fg = "black"
-                    bg = "green"
-                if iter_x == minefield.x and iter_y == minefield.y:
-                    fg = "black"            # Override the foreground color to make it more readable against the green background
-                    bg = "bright_green"
-        else:
-            if cell.state == CellState.FLAGGED and not cell.is_mine:
-                bg = "red"                  # Indicates incorrectly placed flag
+        if minefield.state == GameState.IN_PROGRESS and iter_x == minefield.x and iter_y == minefield.y:
+            bg = "bright_green"
+            fg = "black"            # Override the foreground color to make it more readable against the green background
+        elif minefield.state != GameState.IN_PROGRESS and cell.state == CellState.FLAGGED and not cell.is_mine:
+            bg = "red"                  # Indicates incorrectly placed flag
 
         return style(cell.state.value, bg=bg, fg=fg)
 
