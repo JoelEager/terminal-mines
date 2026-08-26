@@ -3,7 +3,7 @@ Models the game state and exposes functions for manipulating it.
 """
 
 from enum import Enum
-from random import randint
+from random import randint, choice
 
 
 class CellState(Enum):
@@ -55,6 +55,7 @@ class Minefield:
         self.state = GameState.IN_PROGRESS
 
         self.rows = [[Cell("{},{}".format(x, y) in mines) for x in range(width)] for y in range(height)]
+        self._first_move = True
 
     def __repr__(self):
         return "{}({}, {})".format(type(self).__name__, self.width, self.height)
@@ -110,7 +111,7 @@ class Minefield:
         for neighbor_x, neighbor_y in self.neighboring_cords(x, y):
             yield self.get_cell(neighbor_x, neighbor_y)
 
-    def reveal_cell(self, x, y):
+    def reveal_cell(self, x, y, recursing=False):
         """
         Reveals the given cell and updates the game state. Will recursively reveal other cells if the given one is safe.
         """
@@ -118,6 +119,15 @@ class Minefield:
 
         if target.state != CellState.UNKNOWN:
             return
+
+        # If this is the first move, and the target cell is a mine, relocate it to a random cell that does not contain a mine
+        if not recursing and self._first_move:
+            self._first_move = False
+            if target.is_mine:
+                target.is_mine = False
+                available_cells = [cell for cell in self.cells if not cell.is_mine and cell != target]
+                if available_cells:
+                    choice(available_cells).is_mine = True
 
         if target.is_mine:
             # Game lost; update all un-flagged mines as exploded
@@ -136,10 +146,19 @@ class Minefield:
 
                 # Use recursion to propagate the reveal to neighboring cells
                 for neighbor_x, neighbor_y in self.neighboring_cords(x, y):
-                    self.reveal_cell(neighbor_x, neighbor_y)
+                    self.reveal_cell(neighbor_x, neighbor_y, recursing=True)
             else:
                 target.state = CellState(str(neighbor_mines))
-                
+            
+            if not recursing:
+                # Check if the game has been won (i.e. all non-mine cells have been revealed)
+                for cell in self.cells:
+                    if not cell.is_mine and cell.state == CellState.UNKNOWN:
+                        return
+
+                self.state = GameState.WON
+
+
     def flag_cell(self, x, y):
         """
         Toggles a cell between the unknown and flagged states. Does nothing if called on a revealed cell or if the
@@ -151,15 +170,6 @@ class Minefield:
             target.state = CellState.UNKNOWN
         elif target.state == CellState.UNKNOWN and self.flags_remaining > 0:
             target.state = CellState.FLAGGED
-
-            # Check if the game has been won
-            for cell in self.cells:
-                if cell.is_mine and cell.state != CellState.FLAGGED:
-                    return
-                elif not cell.is_mine and cell.state == CellState.FLAGGED:
-                    return
-
-            self.state = GameState.WON
 
 
 def random_minefield(num_mines, width, height):

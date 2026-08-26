@@ -74,13 +74,11 @@ def main(ctx, difficulty, solve, mines_file):
     - intermediate: A 16x16 board with 40 mines
     - expert: A 16x30 board with 99 mines
 
-    Note that this version of Minesweeper does not guarantee that your first move will always be safe. Additionally, in
-    this version a "win" is defined as flagging all mines, not revealing all safe cells.
-
     The mines file (if provided) is used to control the placement of mines. It must be a CSV where each line is of the
     form "<x>,<y>". Both coordinates are 0-based and count from the top-left corner of the game board. If any of the
     specified mines are outside the bounds of the game board they will be skipped. If a mines file is provided the
-    "number of mines" portion of the difficulty setting will be ignored.
+    "number of mines" portion of the difficulty setting will be ignored. If the first move would reveal a mine it will
+    be relocated to a random cell that does not contain a mine.
     """
     if mines_file:
         mines = set(map(lambda line: line.strip(), mines_file))
