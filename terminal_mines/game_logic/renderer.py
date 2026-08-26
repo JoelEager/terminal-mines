@@ -32,14 +32,13 @@ def render(minefield):
         cell = minefield.get_cell(iter_x, iter_y)
 
         fg = fg_mapping.get(cell.state, None)
+        bg = None
 
-        if iter_x == minefield.x and iter_y == minefield.y:
-            bg = "green"
-            fg = "black"    # Override the foreground color to make it more readable against the green background
-        elif minefield.state != GameState.IN_PROGRESS and cell.state == CellState.FLAGGED:
-            bg = None if cell.is_mine else "red"    # Indicates incorrectly placed flag
-        else:
-            bg = None
+        if minefield.state == GameState.IN_PROGRESS and iter_x == minefield.x and iter_y == minefield.y:
+            bg = "bright_green"
+            fg = "black"            # Override the foreground color to make it more readable against the green background
+        elif minefield.state != GameState.IN_PROGRESS and cell.state == CellState.FLAGGED and not cell.is_mine:
+            bg = "red"              # Indicates incorrectly placed flag
 
         return style(cell.state.value, bg=bg, fg=fg)
 
@@ -57,7 +56,13 @@ def render(minefield):
         elif minefield.state == GameState.LOST:
             yield " Game lost"
         else:
-            yield " Flags remaining: {}".format(minefield.flags_remaining)
+            remain_safe = len([cell for cell in minefield.cells if not cell.is_mine and cell.state == CellState.UNKNOWN])
+            yield " {} / {} marked; {} safe {}".format(
+                len([cell for cell in minefield.cells if cell.state == CellState.FLAGGED]), 
+                minefield.num_mines, 
+                remain_safe, 
+                "cell remains" if remain_safe == 1 else "cells remain"
+            )
 
     try:
         echo("\n".join(gen_lines()))
