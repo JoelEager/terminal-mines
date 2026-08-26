@@ -1,4 +1,4 @@
-# terminal-mines
+# Terminal Mines
 A command-line variant of Minesweeper in Python.
 
 ![Screenshot](https://raw.githubusercontent.com/JoelEager/terminal-mines/master/screenshot.png "A game in progress")
@@ -22,6 +22,4 @@ cd terminal-mines
 pip install --editable .
 ```
 
-After doing that the `mines` command will point to your cloned copy.
-
-`terminal-mines` was made using the [Click](https://click.palletsprojects.com) CLI framework.
+After doing that the `mines` command will point to your cloned version.

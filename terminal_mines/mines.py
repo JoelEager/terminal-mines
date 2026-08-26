@@ -42,7 +42,7 @@ class DifficultyParamType(click.ParamType):
                 self.fail("a custom difficulty must be made of 3 positive integers separated by commas", param, ctx)
 
 
-@click.command()
+@click.command(context_settings=dict(help_option_names=["-h", "--help"]))
 @click.pass_context
 @click.argument("difficulty", default="balanced", type=DifficultyParamType())
 @click.option("--solve", is_flag=True, help="Watch the included AI attempt to solve the minefield.")
