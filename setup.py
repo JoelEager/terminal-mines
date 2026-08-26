@@ -16,7 +16,7 @@ setup(
     url="https://github.com/JoelEager/terminal-mines",
     packages=find_packages(),
     install_requires=[
-        "click==7.0",
+        "click>=7.0",
     ],
     entry_points="""
         [console_scripts]
