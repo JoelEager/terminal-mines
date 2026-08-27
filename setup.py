@@ -1,12 +1,15 @@
 from setuptools import setup, find_packages
 
 with open("README.md") as file:
-    # Long description is the readme minus the header line
-    long_description = file.read()[17:]
+    # Long description is the readme minus the header line and last section
+    long_description = file.read()
+    start = long_description.find("\n") + 1
+    end = long_description.rfind("\n## ")
+    long_description = long_description[start:end].strip()
 
 setup(
     name="terminal-mines",
-    version="1.4",
+    version="1.5",
     python_requires="~=3.4",
     license="MIT",
     author="Joel Eager",

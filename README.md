@@ -6,14 +6,23 @@ A command-line variant of Minesweeper in Python.
 Supports Linux, Mac, and Windows on Python 3.4 or newer. Can be played in most terminal emulators that support colors. 
 Includes options for custom difficulties and user-specified mine placements.
 
+Once installed, use the `mines` command to start a new game.
+
+**For help, controls, and usage run `mines --help` after installing.**
+
+## Change log
+- **v1.5**: Bug fixes for status and win logic.
+- **v1.4**: Use the official minesweeper win definition and ensure that the first move is always safe. Improve game status message.
+- **v1.3**: Add simple AI solver.
+- **v1.2**: New difficulty mode.
+- **v1.1**: Bug fix for Windows.
+- **v1.0**: Initial release.
+
+## Installation
 To install use pip:
 ```
 pip install terminal-mines
 ```
-
-Once installed, use the `mines` command to start a new game.
-
-**For help, controls, and usage run `mines --help` after installing.**
 
 If you'd like to set `terminal-mines` up for local development run these commands:
 ```
@@ -23,10 +32,3 @@ pip install --editable .
 ```
 
 After doing that the `mines` command will point to your cloned version.
-
-## Running Tests
-
-To run the unit test suite, execute unittest discovery:
-```
-python -m unittest discover tests
-```
