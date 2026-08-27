@@ -6,7 +6,7 @@ from itertools import chain
 
 from click import clear, style, echo, get_current_context
 
-from .game_model import GameState, CellState
+from .game_model import UNREVEALED_CELL_STATES, GameState, CellState
 
 fg_mapping = {
     CellState.FLAGGED: "bright_green",
@@ -56,7 +56,7 @@ def render(minefield):
         elif minefield.state == GameState.LOST:
             yield " Game lost"
         else:
-            remain_safe = len([cell for cell in minefield.cells if not cell.is_mine and cell.state == CellState.UNKNOWN])
+            remain_safe = len([cell for cell in minefield.cells if not cell.is_mine and cell.state in UNREVEALED_CELL_STATES])
             yield " {} / {} marked; {} safe {}".format(
                 len([cell for cell in minefield.cells if cell.state == CellState.FLAGGED]), 
                 minefield.num_mines, 

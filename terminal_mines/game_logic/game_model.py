@@ -21,6 +21,9 @@ class CellState(Enum):
     EXPLODED = "X"
 
 
+UNREVEALED_CELL_STATES = {CellState.UNKNOWN, CellState.FLAGGED}
+
+
 class GameState(Enum):
     IN_PROGRESS = 0
     WON = 1
@@ -153,7 +156,7 @@ class Minefield:
             if not recursing:
                 # Check if the game has been won (i.e. all non-mine cells have been revealed)
                 for cell in self.cells:
-                    if not cell.is_mine and cell.state in {CellState.UNKNOWN, CellState.FLAGGED}:
+                    if not cell.is_mine and cell.state in UNREVEALED_CELL_STATES:
                         return
 
                 self.state = GameState.WON
