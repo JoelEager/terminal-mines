@@ -23,3 +23,10 @@ pip install --editable .
 ```
 
 After doing that the `mines` command will point to your cloned version.
+
+## Running Tests
+
+To run the unit test suite, execute unittest discovery:
+```
+python -m unittest discover tests
+```
