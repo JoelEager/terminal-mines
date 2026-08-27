@@ -30,7 +30,7 @@ class DifficultyParamType(click.ParamType):
 
                 if len(args) != 3:
                     raise ValueError
-                elif args[0] < 0 or args[1] < 0 or args[2] < 0:
+                elif args[0] <= 0 or args[1] <= 0 or args[2] <= 0:
                     raise ValueError
                 elif args[1] > 50 or args[2] > 50:
                     self.fail("the game board cannot be larger than 50 cells on either side", param, ctx)
