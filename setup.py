@@ -17,7 +17,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/JoelEager/terminal-mines",
-    packages=find_packages(),
+    packages=find_packages(exclude=["tests"]),
     install_requires=[
         "click>=7.0",
     ],
