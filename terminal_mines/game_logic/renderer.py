@@ -34,11 +34,13 @@ def render(minefield):
         fg = fg_mapping.get(cell.state, None)
         bg = None
 
-        if minefield.state == GameState.IN_PROGRESS and iter_x == minefield.x and iter_y == minefield.y:
+        if minefield.state != GameState.WON and iter_x == minefield.x and iter_y == minefield.y:
+            # Highlight the currently selected cell
             bg = "bright_green"
             fg = "black"            # Override the foreground color to make it more readable against the green background
         elif minefield.state != GameState.IN_PROGRESS and cell.state == CellState.FLAGGED and not cell.is_mine:
-            bg = "red"              # Indicates incorrectly placed flag
+            # Indicate incorrectly placed flag
+            bg = "red"
 
         return style(cell.state.value, bg=bg, fg=fg)
 
@@ -67,7 +69,6 @@ def render(minefield):
     try:
         echo("\n".join(gen_lines()))
     except UnicodeEncodeError:
-        # The Git bash emulator on Windows doesn't play nice with unicode or the input loop. To save the user from this
-        #   we'll quit while we're ahead.
+        # The Git bash emulator on Windows doesn't support unicode or the input loop; quit with a helpful message
         get_current_context().fail("terminal-mines does not support the Git bash emulator on Windows. Please use CMD "
                                    "or PowerShell instead.")

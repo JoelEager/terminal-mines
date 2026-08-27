@@ -1,5 +1,5 @@
 """
-A minesweeper board solver. Includes logic to display moves as they are made.
+A simple minesweeper board solver. Includes logic to display moves as they are made.
 """
 from random import randint, shuffle
 from time import sleep
@@ -85,21 +85,22 @@ def solve_game(minefield):
 
         # Make a move
         move = pick_move(minefield)
+        move.func(move.x, move.y)
 
+        # Update the selected cell to indicate the move the AI just made
         minefield.x = move.x
         minefield.y = move.y
 
+        # Increment the stats
         moves += 1
         if move.guess:
             guesses += 1
-
-        move.func(move.x, move.y)
 
         # Render the updated game state
         render(minefield)
 
         if minefield.state != GameState.IN_PROGRESS:
-            # Print the stats info and return
+            # Print the stats and return
             message_format = "\n"
             if guesses == 1:
                 message_format += "The AI made {} moves of which {} was a guess."

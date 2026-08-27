@@ -57,7 +57,9 @@ class Minefield:
         self.y = 0      # The y cord of the currently selected cell
         self.state = GameState.IN_PROGRESS
 
-        self.rows = [[Cell("{},{}".format(x, y) in mines) for x in range(width)] for y in range(height)]
+        self.rows = [
+            [Cell("{},{}".format(x, y) in mines) for x in range(width)] for y in range(height)
+        ]
         self._first_move = True
 
     def __repr__(self):
