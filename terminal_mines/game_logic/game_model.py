@@ -153,7 +153,7 @@ class Minefield:
             if not recursing:
                 # Check if the game has been won (i.e. all non-mine cells have been revealed)
                 for cell in self.cells:
-                    if not cell.is_mine and cell.state == CellState.UNKNOWN:
+                    if not cell.is_mine and cell.state in {CellState.UNKNOWN, CellState.FLAGGED}:
                         return
 
                 self.state = GameState.WON
