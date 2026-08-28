@@ -27,7 +27,8 @@ class Move:
 def pick_move(minefield):
     """
     Returns the move the AI wants to take. First it attempts simple deduction. Then two cell deductive analysis. If 
-    neither of those work it resorts to guessing. Corner guesses are preferred since they result in a higher win rate.
+    neither of those work it resorts to guessing. Corner guesses are preferred initially since they result in a higher 
+    win rate.
     """
     # Lambda: Iterate over revealed cells with at least 1 neighboring mine
     iter_revealed_nums = lambda: ((x, y, cell) for x, y, cell in minefield.cords_and_cells if cell.state.value.isdigit())
@@ -89,13 +90,12 @@ def pick_move(minefield):
                                     # All unknown neighbors of A that are not neighbors of B must be safe
                                     return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), debug="Two cell reveal; " + debug_details)
 
-    # Take a guess by revealing a corner cell
+    # If it's early in the game pick a corner to guess
     corners = [(0, 0), (0, minefield.height - 1), (minefield.width - 1, 0), (minefield.width - 1, minefield.height - 1)]
-    shuffle(corners)
-
-    for x, y in corners:
-        if minefield.get_cell(x, y).state == CellState.UNKNOWN:
-            return Move(minefield.reveal_cell, x, y, guess=True, debug="Corner guess")
+    unknown_corners = [(x, y) for x, y in corners if minefield.get_cell(x, y).state == CellState.UNKNOWN]
+    if len(unknown_corners) > 2:
+        shuffle(unknown_corners)
+        return Move(minefield.reveal_cell, unknown_corners[0][0], unknown_corners[0][1], guess=True, debug="Corner guess")
 
     # Take a guess by revealing a random cell
     while True:
