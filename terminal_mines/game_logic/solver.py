@@ -114,7 +114,7 @@ def solve_game(minefield):
 
     # Track some stats on the AI's attempt
     moves = 0
-    guesses = 0
+    guesses = -1  # Don't count the first guess because it's safe
 
     while True:
         sleep(0.1)
@@ -141,14 +141,18 @@ def solve_game(minefield):
 
         if minefield.state != GameState.IN_PROGRESS:
             # Print the stats and return
-            message_format = "\n"
-            if guesses == 1:
-                message_format += "The AI made {} moves of which {} was a guess."
-            else:
-                message_format += "The AI made {} moves of which {} were guesses."
+            message_format = "\nThe AI made {} moves "
 
-            if move.guess and minefield.state == GameState.LOST:
-                message_format += " One of those guesses went poorly."
+            if guesses == 0:
+                message_format += "with no risky guesses."
+            elif guesses == 1:
+                message_format += "of which {} was a risky guess."
+                if minefield.state == GameState.LOST:
+                    message_format += " That guess went poorly."
+            else:
+                message_format += "of which {} were risky guesses."
+                if minefield.state == GameState.LOST:
+                    message_format += " One of those guesses went poorly."
 
             echo(message_format.format(moves, guesses))
             return
