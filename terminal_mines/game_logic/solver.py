@@ -44,6 +44,9 @@ def pick_move(minefield):
     # Lambda: Count the number of flagged neighbors
     count_flagged_neighbors = lambda x, y: len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.FLAGGED])
 
+    # Lambda: Count the number of neighbors with a number state
+    count_number_neighbors = lambda x, y: len([cell for cell in minefield.neighbors(x, y) if cell.state.value.isdigit()])
+
     # If possible, place a flag via simple deduction
     for x, y, cell in iter_revealed_nums():
         unknown_neighbors = list(iter_unknown_neighbors(x, y))
@@ -106,8 +109,7 @@ def pick_move(minefield):
                 shuffle(unknown_neighbors)
                 for candidate_x, candidate_y in unknown_neighbors:
                     # Make sure the candidate guess hasn't had its risk influenced by another neighboring number
-                    numbers_neighboring_candidate = len([cell for cell in minefield.neighbors(candidate_x, candidate_y) if cell.state.value.isdigit()])
-                    if numbers_neighboring_candidate == 1:
+                    if count_number_neighbors(candidate_x, candidate_y) == 1:
                         best_guess = (candidate_x, candidate_y)
                         risk = neighbor_risk
                         break
@@ -122,13 +124,16 @@ def pick_move(minefield):
         shuffle(unknown_corners)
         return Move(minefield.reveal_cell, unknown_corners[0][0], unknown_corners[0][1], guess=True, debug="Corner guess")
 
-    # Take a guess by revealing a random cell
-    while True:
-        x = randint(0, minefield.width - 1)
-        y = randint(0, minefield.height - 1)
+    # Take a guess by revealing a random cell; preferably one not neighboring a revealed number
+    all_unknown = [(x, y) for x, y, cell in minefield.cords_and_cells if cell.state == CellState.UNKNOWN]
+    unknown_without_number_neighbors = [(x, y) for x, y in all_unknown if count_number_neighbors(x, y) == 0]
 
-        if minefield.get_cell(x, y).state == CellState.UNKNOWN:
-            return Move(minefield.reveal_cell, x, y, guess=True, debug="Random guess")
+    if unknown_without_number_neighbors:
+        shuffle(unknown_without_number_neighbors)
+        return Move(minefield.reveal_cell, unknown_without_number_neighbors[0][0], unknown_without_number_neighbors[0][1], guess=True, debug="Random greenfield guess")
+    
+    shuffle(all_unknown)
+    return Move(minefield.reveal_cell, all_unknown[0][0], all_unknown[0][1], guess=True, debug="Random guess")
 
 
 def solve_game(minefield):
