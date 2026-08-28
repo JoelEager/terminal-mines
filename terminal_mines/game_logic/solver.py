@@ -9,7 +9,7 @@ from click import echo
 from .game_model import GameState, CellState
 from .renderer import render
 
-DEBUG_AI = True  # Set to True to show and pause for debug messages from the AI
+DEBUG_AI = False  # Set to True to show and pause for debug messages from the AI
 
 
 class Move:
@@ -26,64 +26,68 @@ class Move:
 
 def pick_move(minefield):
     """
-    Returns the move the AI wants to take. This function is ordered from "best" to "worst" strategy and returns once a
-    valid move is found.
+    Returns the move the AI wants to take. First it attempts simple deduction. Then two cell deductive analysis. If 
+    neither of those work it resorts to guessing. Corner guesses are preferred since they result in a higher win rate.
     """
-    # Place a flag via process of elimination
-    for x, y, cell in minefield.cords_and_cells:
-        if cell.state.value.isdigit():
-            # This cell is revealed and has at least 1 mine neighboring it
-            state_num = int(cell.state.value)
-            num_unknown_neighbors = len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.UNKNOWN])
-            num_flagged_neighbors = len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.FLAGGED])
+    # Lambda: Iterate over revealed cells with at least 1 neighboring mine
+    iter_revealed_nums = lambda: ((x, y, cell) for x, y, cell in minefield.cords_and_cells if cell.state.value.isdigit())
 
-            if state_num == num_unknown_neighbors + num_flagged_neighbors:
-                # All unknown neighboring cells must be mines
-                for neighbor_x, neighbor_y in minefield.neighboring_cords(x, y):
-                    if minefield.get_cell(neighbor_x, neighbor_y).state == CellState.UNKNOWN:
-                        return Move(minefield.flag_cell, neighbor_x, neighbor_y)
+    # Lambda: Iterate over the unknown neighbors of a given cell
+    iter_unknown_neighbors = lambda x, y: (
+        (neighbor_x, neighbor_y) for neighbor_x, neighbor_y in minefield.neighboring_cords(x, y)
+        if minefield.get_cell(neighbor_x, neighbor_y).state == CellState.UNKNOWN
+    )
 
-    # Reveal a cell via process of elimination
-    for x, y, cell in minefield.cords_and_cells:
-        if cell.state.value.isdigit():
-            # This cell is revealed and has at least 1 mine neighboring it
-            state_num = int(cell.state.value)
-            num_flagged_neighbors = len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.FLAGGED])
+    # Lambda: The number of mines visible to a revealed number cell
+    count_visible_mines = lambda cell: int(cell.state.value)
 
-            if state_num == num_flagged_neighbors:
-                # All unknown neighboring cells must be safe
-                for neighbor_x, neighbor_y in minefield.neighboring_cords(x, y):
-                    if minefield.get_cell(neighbor_x, neighbor_y).state == CellState.UNKNOWN:
-                        return Move(minefield.reveal_cell, neighbor_x, neighbor_y)
+    # Lambda: Count the number of flagged neighbors
+    count_flagged_neighbors = lambda x, y: len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.FLAGGED])
+
+    # If possible, place a flag via simple deduction
+    for x, y, cell in iter_revealed_nums():
+        unknown_neighbors = list(iter_unknown_neighbors(x, y))
+        if count_visible_mines(cell) == len(unknown_neighbors) + count_flagged_neighbors(x, y):
+            # All unknown neighboring cells must be mines
+            for neighbor_x, neighbor_y in unknown_neighbors:
+                    return Move(minefield.flag_cell, neighbor_x, neighbor_y)
+
+    # If possible, reveal a cell via simple deduction
+    for x, y, cell in iter_revealed_nums():
+        if count_visible_mines(cell) == count_flagged_neighbors(x, y):
+            # All unknown neighboring cells must be safe
+            for neighbor_x, neighbor_y in iter_unknown_neighbors(x, y):
+                return Move(minefield.reveal_cell, neighbor_x, neighbor_y)
 
     # Perform two cell analysis
-    for x_a, y_a, cell_a in minefield.cords_and_cells:
-        if cell_a.state.value.isdigit():
-            unknown_neighbors_a = {(x, y) for x, y in minefield.neighboring_cords(x_a, y_a) if minefield.get_cell(x, y).state == CellState.UNKNOWN}
-            if unknown_neighbors_a:
-                remaining_mines_a = int(cell_a.state.value) - len([cell for cell in minefield.neighbors(x_a, y_a) if cell.state == CellState.FLAGGED])
+    for x_a, y_a, cell_a in iter_revealed_nums():
+        unknown_neighbors_a = set(iter_unknown_neighbors(x_a, y_a))
+        if unknown_neighbors_a:
+            remaining_mines_a = count_visible_mines(cell_a) - count_flagged_neighbors(x_a, y_a)
 
-                for x_b, y_b in minefield.neighboring_cords(x_a, y_a):
-                    cell_b = minefield.get_cell(x_b, y_b)
-                    if cell_b.state.value.isdigit():
-                        unknown_neighbors_b = {(x, y) for x, y in minefield.neighboring_cords(x_b, y_b) if minefield.get_cell(x, y).state == CellState.UNKNOWN}
-                        if unknown_neighbors_b:
+            for x_b, y_b in minefield.neighboring_cords(x_a, y_a):
+                cell_b = minefield.get_cell(x_b, y_b)
+                if cell_b.state.value.isdigit():
+                    unknown_neighbors_b = set(iter_unknown_neighbors(x_b, y_b))
+                    if unknown_neighbors_b:
 
-                            if unknown_neighbors_a > unknown_neighbors_b:
-                                unknown_a_not_b = unknown_neighbors_a - unknown_neighbors_b
-                                if unknown_a_not_b:
-                                    # The preceding code has selected cells A and B such that:
-                                    #  - Both are revealed numbers with unknown neighbors.
-                                    #  - B's unknown neighbors are a strict subset of A's.
-                                    #  - At least one cell is an unknown neighbor of A but not B.
+                        if unknown_neighbors_a > unknown_neighbors_b:
+                            unknown_a_not_b = unknown_neighbors_a - unknown_neighbors_b
+                            if unknown_a_not_b:
+                                # The preceding code has selected cells A and B such that:
+                                #  - Both are revealed numbers with unknown neighbors.
+                                #  - B's unknown neighbors are a strict subset of A's.
+                                #  - At least one cell is an unknown neighbor of A but not B.
 
-                                    remaining_mines_b = int(cell_b.state.value) - len([cell for cell in minefield.neighbors(x_b, y_b) if cell.state == CellState.FLAGGED])
-                                    debug_details = "Cell A ({}, {}) has {} remaining mines; Cell B ({}, {}) has {} remaining mines".format(x_a, y_a, remaining_mines_a, x_b, y_b, remaining_mines_b)
+                                remaining_mines_b = count_visible_mines(cell_b) - count_flagged_neighbors(x_b, y_b)
+                                debug_details = "cell A ({}, {}) has {} remaining mines; cell B ({}, {}) has {} remaining mines".format(x_a, y_a, remaining_mines_a, x_b, y_b, remaining_mines_b)
 
-                                    if remaining_mines_a - remaining_mines_b == len(unknown_a_not_b):
-                                        return Move(minefield.flag_cell, *unknown_a_not_b.pop(), debug="Two cell flag; " + debug_details)
-                                    if remaining_mines_a - remaining_mines_b == 0:
-                                        return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), debug="Two cell reveal; " + debug_details)
+                                if remaining_mines_a - remaining_mines_b == len(unknown_a_not_b):
+                                    # All unknown neighbors of A that are not neighbors of B must be mines
+                                    return Move(minefield.flag_cell, *unknown_a_not_b.pop(), debug="Two cell flag; " + debug_details)
+                                if remaining_mines_a - remaining_mines_b == 0:
+                                    # All unknown neighbors of A that are not neighbors of B must be safe
+                                    return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), debug="Two cell reveal; " + debug_details)
 
     # Take a guess by revealing a corner cell
     corners = [(0, 0), (0, minefield.height - 1), (minefield.width - 1, 0), (minefield.width - 1, minefield.height - 1)]
