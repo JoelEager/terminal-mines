@@ -9,6 +9,8 @@ from click import echo
 from .game_model import GameState, CellState
 from .renderer import render
 
+DEBUG_AI = True  # Set to True to show and pause for debug messages from the AI
+
 
 class Move:
     """
@@ -76,56 +78,12 @@ def pick_move(minefield):
                                     #  - At least one cell is an unknown neighbor of A but not B.
 
                                     remaining_mines_b = int(cell_b.state.value) - len([cell for cell in minefield.neighbors(x_b, y_b) if cell.state == CellState.FLAGGED])
+                                    debug_details = "Cell A ({}, {}) has {} remaining mines; Cell B ({}, {}) has {} remaining mines".format(x_a, y_a, remaining_mines_a, x_b, y_b, remaining_mines_b)
+
                                     if remaining_mines_a - remaining_mines_b == len(unknown_a_not_b):
-                                        return Move(minefield.flag_cell, *unknown_a_not_b.pop(), debug="Cell A ({}, {}) has {} remaining mines; Cell B ({}, {}) has {} remaining mines".format(x_a, y_a, remaining_mines_a, x_b, y_b, remaining_mines_b))
+                                        return Move(minefield.flag_cell, *unknown_a_not_b.pop(), debug="Two cell flag; " + debug_details)
                                     if remaining_mines_a - remaining_mines_b == 0:
-                                        return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), debug="Cell A ({}, {}) has {} remaining mines; Cell B ({}, {}) has {} remaining mines".format(x_a, y_a, remaining_mines_a, x_b, y_b, remaining_mines_b))
-
-            
-
-
-    # cell_a = For each number with unknown neighbors
-    #   rm_a = Number of remaining mines for cell_a
-    #   un_a = Set of cell_a's unknown neighbors
-    #
-    #   cell_b = For each of cell_a's neighboring numbers that have their own unknown neighbors
-    #       un_b = Set of cell_b's unknown neighbors
-    #       rm_b = Number of remaining mines for cell_b
-    #       
-    #       If un_b is a strict subset of un_a
-    #           un_diff = un_a - un_b
-    #
-    #           If rm_a - rm_b == len(un_diff)
-    #               Flag un_diff[0]
-    #
-    #           If rm_a - rm_b == 0
-    #               Reveal un_diff[0]
-
-    # # Calculate fractional mines
-    # fractional_mines = dict()
-    # for x, y, cell in minefield.cords_and_cells:
-    #     if cell.state.value.isdigit():
-    #         unknown_neighbors = len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.UNKNOWN])
-    #         flagged_neighbors = len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.FLAGGED])
-    #         remaining_mines = int(cell.state.value) - flagged_neighbors
-    #         mine_fraction = remaining_mines / unknown_neighbors
-
-    #         for neighbor_x, neighbor_y in minefield.neighboring_cords(x, y):
-    #             neighbor_cell = minefield.get_cell(neighbor_x, neighbor_y)
-    #             if neighbor_cell.state == CellState.UNKNOWN:
-    #                 current = fractional_mines.get((neighbor_x, neighbor_y), 1)
-    #                 fractional_mines[neighbor_x, neighbor_y] = min(current, mine_fraction)
-
-    # # Place a flag if a cell is proven to be a mine by counting fractions
-    # for x, y, cell in minefield.cords_and_cells:
-    #     if cell.state.value.isdigit():
-    #         unknown_neighbors = len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.UNKNOWN])
-    #         flagged_neighbors = len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.FLAGGED])
-    #         remaining_mines = int(cell.state.value) - flagged_neighbors
-
-    #         for neighbor_x, neighbor_y in minefield.neighboring_cords(x, y):
-    #             neighbor_cell = minefield.get_cell(neighbor_x, neighbor_y)
-    #             if neighbor_cell.state == CellState.UNKNOWN:
+                                        return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), debug="Two cell reveal; " + debug_details)
 
     # Take a guess by revealing a corner cell
     corners = [(0, 0), (0, minefield.height - 1), (minefield.width - 1, 0), (minefield.width - 1, minefield.height - 1)]
@@ -133,7 +91,7 @@ def pick_move(minefield):
 
     for x, y in corners:
         if minefield.get_cell(x, y).state == CellState.UNKNOWN:
-            return Move(minefield.reveal_cell, x, y, guess=True)
+            return Move(minefield.reveal_cell, x, y, guess=True, debug="Corner guess")
 
     # Take a guess by revealing a random cell
     while True:
@@ -141,7 +99,7 @@ def pick_move(minefield):
         y = randint(0, minefield.height - 1)
 
         if minefield.get_cell(x, y).state == CellState.UNKNOWN:
-            return Move(minefield.reveal_cell, x, y, guess=True)
+            return Move(minefield.reveal_cell, x, y, guess=True, debug="Random guess")
 
 
 def solve_game(minefield):
@@ -173,8 +131,9 @@ def solve_game(minefield):
         # Render the updated game state
         render(minefield)
 
-        if move.debug:
-            input("AI debug ({}, {}): {}".format(move.x, move.y, move.debug))
+        if DEBUG_AI and move.debug:
+            print("AI debug ({}, {}): {}".format(move.x, move.y, move.debug))
+            input("Press Enter to continue...")
 
         if minefield.state != GameState.IN_PROGRESS:
             # Print the stats and return
