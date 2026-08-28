@@ -58,7 +58,8 @@ def render(minefield):
         elif minefield.state == GameState.LOST:
             yield " Game lost"
         else:
-            remain_safe = len([cell for cell in minefield.cells if not cell.is_mine and cell.state in UNREVEALED_CELL_STATES])
+            total_safe = minefield.width * minefield.height - minefield.num_mines
+            remain_safe = total_safe - len([cell for cell in minefield.cells if cell.state == CellState.SAFE or cell.state.value.isdigit()])
             yield " {} / {} marked; {} safe {}".format(
                 len([cell for cell in minefield.cells if cell.state == CellState.FLAGGED]), 
                 minefield.num_mines, 
