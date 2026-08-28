@@ -88,9 +88,12 @@ class Minefield:
     def num_mines(self):
         return len([cell for cell in self.cells if cell.is_mine])
 
+    def count_cells_with_state(self, state):
+        return len([cell for cell in self.cells if cell.state == state])
+
     @property
     def flags_remaining(self):
-        return self.num_mines - len([cell for cell in self.cells if cell.state == CellState.FLAGGED])
+        return self.num_mines - self.count_cells_with_state(CellState.FLAGGED)
 
     def get_cell(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
