@@ -14,11 +14,12 @@ class Move:
     """
     Models a move for the AI.
     """
-    def __init__(self, func, x, y, guess=False):
+    def __init__(self, func, x, y, guess=False, debug=None):
         self.func = func
         self.x = x
         self.y = y
         self.guess = guess
+        self.debug = debug
 
 
 def pick_move(minefield):
@@ -31,10 +32,10 @@ def pick_move(minefield):
         if cell.state.value.isdigit():
             # This cell is revealed and has at least 1 mine neighboring it
             state_num = int(cell.state.value)
-            unknown_neighbors = len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.UNKNOWN])
-            flagged_neighbors = len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.FLAGGED])
+            num_unknown_neighbors = len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.UNKNOWN])
+            num_flagged_neighbors = len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.FLAGGED])
 
-            if state_num == unknown_neighbors + flagged_neighbors:
+            if state_num == num_unknown_neighbors + num_flagged_neighbors:
                 # All unknown neighboring cells must be mines
                 for neighbor_x, neighbor_y in minefield.neighboring_cords(x, y):
                     if minefield.get_cell(neighbor_x, neighbor_y).state == CellState.UNKNOWN:
@@ -45,13 +46,86 @@ def pick_move(minefield):
         if cell.state.value.isdigit():
             # This cell is revealed and has at least 1 mine neighboring it
             state_num = int(cell.state.value)
-            flagged_neighbors = len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.FLAGGED])
+            num_flagged_neighbors = len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.FLAGGED])
 
-            if state_num == flagged_neighbors:
+            if state_num == num_flagged_neighbors:
                 # All unknown neighboring cells must be safe
                 for neighbor_x, neighbor_y in minefield.neighboring_cords(x, y):
                     if minefield.get_cell(neighbor_x, neighbor_y).state == CellState.UNKNOWN:
                         return Move(minefield.reveal_cell, neighbor_x, neighbor_y)
+
+    # Perform two cell analysis
+    for x_a, y_a, cell_a in minefield.cords_and_cells:
+        if cell_a.state.value.isdigit():
+            unknown_neighbors_a = {(x, y) for x, y in minefield.neighboring_cords(x_a, y_a) if minefield.get_cell(x, y).state == CellState.UNKNOWN}
+            if unknown_neighbors_a:
+                remaining_mines_a = int(cell_a.state.value) - len([cell for cell in minefield.neighbors(x_a, y_a) if cell.state == CellState.FLAGGED])
+
+                for x_b, y_b in minefield.neighboring_cords(x_a, y_a):
+                    cell_b = minefield.get_cell(x_b, y_b)
+                    if cell_b.state.value.isdigit():
+                        unknown_neighbors_b = {(x, y) for x, y in minefield.neighboring_cords(x_b, y_b) if minefield.get_cell(x, y).state == CellState.UNKNOWN}
+                        if unknown_neighbors_b:
+
+                            if unknown_neighbors_a > unknown_neighbors_b:
+                                unknown_a_not_b = unknown_neighbors_a - unknown_neighbors_b
+                                if unknown_a_not_b:
+                                    # The preceding code has selected cells A and B such that:
+                                    #  - Both are revealed numbers with unknown neighbors.
+                                    #  - B's unknown neighbors are a strict subset of A's.
+                                    #  - At least one cell is an unknown neighbor of A but not B.
+
+                                    remaining_mines_b = int(cell_b.state.value) - len([cell for cell in minefield.neighbors(x_b, y_b) if cell.state == CellState.FLAGGED])
+                                    if remaining_mines_a - remaining_mines_b == len(unknown_a_not_b):
+                                        return Move(minefield.flag_cell, *unknown_a_not_b.pop(), debug="Cell A ({}, {}) has {} remaining mines; Cell B ({}, {}) has {} remaining mines".format(x_a, y_a, remaining_mines_a, x_b, y_b, remaining_mines_b))
+                                    if remaining_mines_a - remaining_mines_b == 0:
+                                        return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), debug="Cell A ({}, {}) has {} remaining mines; Cell B ({}, {}) has {} remaining mines".format(x_a, y_a, remaining_mines_a, x_b, y_b, remaining_mines_b))
+
+            
+
+
+    # cell_a = For each number with unknown neighbors
+    #   rm_a = Number of remaining mines for cell_a
+    #   un_a = Set of cell_a's unknown neighbors
+    #
+    #   cell_b = For each of cell_a's neighboring numbers that have their own unknown neighbors
+    #       un_b = Set of cell_b's unknown neighbors
+    #       rm_b = Number of remaining mines for cell_b
+    #       
+    #       If un_b is a strict subset of un_a
+    #           un_diff = un_a - un_b
+    #
+    #           If rm_a - rm_b == len(un_diff)
+    #               Flag un_diff[0]
+    #
+    #           If rm_a - rm_b == 0
+    #               Reveal un_diff[0]
+
+    # # Calculate fractional mines
+    # fractional_mines = dict()
+    # for x, y, cell in minefield.cords_and_cells:
+    #     if cell.state.value.isdigit():
+    #         unknown_neighbors = len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.UNKNOWN])
+    #         flagged_neighbors = len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.FLAGGED])
+    #         remaining_mines = int(cell.state.value) - flagged_neighbors
+    #         mine_fraction = remaining_mines / unknown_neighbors
+
+    #         for neighbor_x, neighbor_y in minefield.neighboring_cords(x, y):
+    #             neighbor_cell = minefield.get_cell(neighbor_x, neighbor_y)
+    #             if neighbor_cell.state == CellState.UNKNOWN:
+    #                 current = fractional_mines.get((neighbor_x, neighbor_y), 1)
+    #                 fractional_mines[neighbor_x, neighbor_y] = min(current, mine_fraction)
+
+    # # Place a flag if a cell is proven to be a mine by counting fractions
+    # for x, y, cell in minefield.cords_and_cells:
+    #     if cell.state.value.isdigit():
+    #         unknown_neighbors = len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.UNKNOWN])
+    #         flagged_neighbors = len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.FLAGGED])
+    #         remaining_mines = int(cell.state.value) - flagged_neighbors
+
+    #         for neighbor_x, neighbor_y in minefield.neighboring_cords(x, y):
+    #             neighbor_cell = minefield.get_cell(neighbor_x, neighbor_y)
+    #             if neighbor_cell.state == CellState.UNKNOWN:
 
     # Take a guess by revealing a corner cell
     corners = [(0, 0), (0, minefield.height - 1), (minefield.width - 1, 0), (minefield.width - 1, minefield.height - 1)]
@@ -98,6 +172,9 @@ def solve_game(minefield):
 
         # Render the updated game state
         render(minefield)
+
+        if move.debug:
+            input("AI debug ({}, {}): {}".format(move.x, move.y, move.debug))
 
         if minefield.state != GameState.IN_PROGRESS:
             # Print the stats and return
