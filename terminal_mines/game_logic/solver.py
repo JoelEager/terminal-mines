@@ -9,7 +9,7 @@ from click import echo
 from .game_model import GameState, CellState
 from .renderer import render
 
-DEBUG_AI = False  # Set to True to show and pause for debug messages from the AI
+DEBUG_AI = True  # Set to True to show and pause for debug messages from the AI
 
 
 class Move:
@@ -27,8 +27,7 @@ class Move:
 def pick_move(minefield):
     """
     Returns the move the AI wants to take. First it attempts simple deduction. Then two cell deductive analysis. If 
-    neither of those work it resorts to guessing. Corner guesses are preferred initially since they result in a higher 
-    win rate.
+    neither of those work it resorts to guessing.
     """
     # Lambda: Iterate over revealed cells with at least 1 neighboring mine
     iter_revealed_nums = lambda: ((x, y, cell) for x, y, cell in minefield.cords_and_cells if cell.state.value.isdigit())
@@ -90,7 +89,33 @@ def pick_move(minefield):
                                     # All unknown neighbors of A that are not neighbors of B must be safe
                                     return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), debug="Two cell reveal; " + debug_details)
 
-    # If it's early in the game pick a corner to guess
+    # Look for a low risk guess
+    num_flags = minefield.count_cells_with_state(CellState.FLAGGED)
+    num_unknown = minefield.count_cells_with_state(CellState.UNKNOWN)
+    base_risk = (minefield.num_mines - num_flags) / num_unknown
+    risk = base_risk  # Start with the worst case risk
+    best_guess = None
+
+    for x, y, cell in iter_revealed_nums():
+        unknown_neighbors = list(iter_unknown_neighbors(x, y))
+        if unknown_neighbors:
+            remaining_mines = count_visible_mines(cell) - count_flagged_neighbors(x, y)
+            neighbor_risk = remaining_mines / len(unknown_neighbors)
+            if neighbor_risk < risk:
+                # Neighbors of this cell have a lower risk than what has been observed so far
+                shuffle(unknown_neighbors)
+                for candidate_x, candidate_y in unknown_neighbors:
+                    # Make sure the candidate guess hasn't had its risk influenced by another neighboring number
+                    numbers_neighboring_candidate = len([cell for cell in minefield.neighbors(candidate_x, candidate_y) if cell.state.value.isdigit()])
+                    if numbers_neighboring_candidate == 1:
+                        best_guess = (candidate_x, candidate_y)
+                        risk = neighbor_risk
+                        break
+
+    if best_guess:
+        return Move(minefield.reveal_cell, best_guess[0], best_guess[1], guess=True, debug="Low risk guess of {} vs base risk of {}".format(risk, base_risk))
+
+    # If it's early in the game pick a corner to guess (which results in a better win probability)
     corners = [(0, 0), (0, minefield.height - 1), (minefield.width - 1, 0), (minefield.width - 1, minefield.height - 1)]
     unknown_corners = [(x, y) for x, y in corners if minefield.get_cell(x, y).state == CellState.UNKNOWN]
     if len(unknown_corners) > 2:
