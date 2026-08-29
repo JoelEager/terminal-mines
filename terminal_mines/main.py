@@ -37,8 +37,8 @@ class DifficultyParamType(click.ParamType):
                     raise ValueError
                 elif args[1] > 50 or args[2] > 50:
                     self.fail("the game board cannot be larger than 50 cells on either side", param, ctx)
-                elif args[0] > args[1] * args[2]:
-                    self.fail("{} mines cannot fit in a board size of {} by {}".format(*args), param, ctx)
+                elif args[0] >= args[1] * args[2]:
+                    self.fail("the game board must have at least one safe cell", param, ctx)
 
                 return args
             except ValueError:

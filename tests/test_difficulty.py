@@ -46,6 +46,11 @@ class TestDifficultyParamType(unittest.TestCase):
             self.param_type.convert("5,-10,10", None, None)
         self.assertIn("a custom difficulty must be made of 3 positive integers separated by commas", str(cm.exception))
 
+        # float dimension
+        with self.assertRaises(click.BadParameter) as cm:
+            self.param_type.convert("5,1.5,10", None, None)
+        self.assertIn("a custom difficulty must be made of 3 positive integers separated by commas", str(cm.exception))
+
     def test_board_size_limit_exceeded(self):
         with self.assertRaises(click.BadParameter) as cm:
             self.param_type.convert("10,51,10", None, None)
@@ -58,7 +63,12 @@ class TestDifficultyParamType(unittest.TestCase):
     def test_too_many_mines(self):
         with self.assertRaises(click.BadParameter) as cm:
             self.param_type.convert("100,5,5", None, None)
-        self.assertIn("100 mines cannot fit in a board size of 5 by 5", str(cm.exception))
+        self.assertIn("the game board must have at least one safe cell", str(cm.exception))
+
+    def test_all_mines(self):
+        with self.assertRaises(click.BadParameter) as cm:
+            self.param_type.convert("25,5,5", None, None)
+        self.assertIn("the game board must have at least one safe cell", str(cm.exception))
 
 
 if __name__ == "__main__":
