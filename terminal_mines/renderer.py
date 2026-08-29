@@ -68,6 +68,5 @@ def render(minefield):
     try:
         echo("\n".join(gen_lines()))
     except UnicodeEncodeError:
-        # The Git bash emulator on Windows doesn't support unicode or the input loop; quit with a helpful message
-        get_current_context().fail("terminal-mines does not support the Git bash emulator on Windows. Please use CMD "
-                                   "or PowerShell instead.")
+        # The Git Bash emulator on Windows doesn't support Unicode or the input loop; quit with a helpful message
+        get_current_context().fail("Terminal Mines does not support the Git Bash emulator on Windows. Use Windows Terminal instead.")
