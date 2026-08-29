@@ -92,7 +92,7 @@ def pick_move(minefield):
                                 #  - At least one cell is an unknown neighbor of A but not B.
 
                                 remaining_mines_b = count_visible_mines(cell_b) - count_flagged_neighbors(x_b, y_b)
-                                debug_details = "cell A ({}, {}) has {} remaining mines; cell B ({}, {}) has {} remaining mines".format(x_a, y_a, remaining_mines_a, x_b, y_b, remaining_mines_b)
+                                debug_details = f"cell A ({x_a}, {y_a}) has {remaining_mines_a} remaining mines; cell B ({x_b}, {y_b}) has {remaining_mines_b} remaining mines"
 
                                 if remaining_mines_a - remaining_mines_b == len(unknown_a_not_b):
                                     # All unknown neighbors of A that are not neighbors of B must be mines
@@ -105,7 +105,7 @@ def pick_move(minefield):
     num_flags = minefield.count_cells_with_state(CellState.FLAGGED)
     num_unknown = minefield.count_cells_with_state(CellState.UNKNOWN)
     base_risk = (minefield.num_mines - num_flags) / num_unknown
-    base_risk_debug = "base risk of {}".format(base_risk)
+    base_risk_debug = f"base risk of {base_risk}"
     risk = base_risk  # Start with the worst case risk
     best_guess = None
 
@@ -125,7 +125,7 @@ def pick_move(minefield):
                         break
 
     if best_guess:
-        return Move(minefield.reveal_cell, best_guess[0], best_guess[1], metrics=["low_risk_guesses", "all_guesses"], debug="Low risk guess of {} vs {}".format(risk, base_risk_debug))
+        return Move(minefield.reveal_cell, best_guess[0], best_guess[1], metrics=["low_risk_guesses", "all_guesses"], debug=f"Low risk guess of {risk} vs {base_risk_debug}")
 
     # Take a guess by revealing a random cell; preferably one not neighboring a revealed number
     all_unknown = [(x, y) for x, y, cell in minefield.cords_and_cells if cell.state == CellState.UNKNOWN]
@@ -133,10 +133,11 @@ def pick_move(minefield):
 
     if unknown_without_number_neighbors:
         shuffle(unknown_without_number_neighbors)
-        return Move(minefield.reveal_cell, unknown_without_number_neighbors[0][0], unknown_without_number_neighbors[0][1], metrics=["all_guesses"], debug="Greenfield guess ({})".format(base_risk_debug))
+        return Move(minefield.reveal_cell, unknown_without_number_neighbors[0][0], unknown_without_number_neighbors[0][1], 
+                    metrics=["all_guesses"], debug=f"Greenfield guess ({base_risk_debug})")
     
     shuffle(all_unknown)
-    return Move(minefield.reveal_cell, all_unknown[0][0], all_unknown[0][1], metrics=["all_guesses"], debug="Fallback guess ({})".format(base_risk_debug))
+    return Move(minefield.reveal_cell, all_unknown[0][0], all_unknown[0][1], metrics=["all_guesses"], debug=f"Fallback guess ({base_risk_debug})")
 
 
 def solve_game(minefield):
@@ -167,7 +168,7 @@ def solve_game(minefield):
         render(minefield)
 
         if AI_DEBUG_MODE and move.debug:
-            echo(" Move({}, {}): {}".format(move.x, move.y, move.debug))
+            echo(f" Move({move.x}, {move.y}): {move.debug}")
             if AI_DEBUG_MODE == "slow":
                 input(" Press Enter to continue...")
 
@@ -175,16 +176,15 @@ def solve_game(minefield):
             if AI_DEBUG_MODE:
                 echo("\nMetrics:")
                 for metric, count in metrics.items():
-                    echo(" {}: {}".format(metric, count))
+                    echo(f" {metric}: {count}")
             else:
-                guesses = metrics["all_guesses"]
-                summary = "\nThe AI made {} moves ".format(metrics["moves"])
-                if guesses == 0:
+                summary = f"\nThe AI made {metrics['moves']} moves "
+                if metrics["all_guesses"] == 0:
                     summary += "with no guesses."
-                elif guesses == 1:
+                elif metrics["all_guesses"] == 1:
                     summary += "of which 1 was a guess."
                 else:
-                    summary += "of which {} were guesses.".format(guesses)
+                    summary += f"of which {metrics['all_guesses']} were guesses."
                 if minefield.state == GameState.LOST:
                     summary += " The last guess went poorly."
                 echo(summary)

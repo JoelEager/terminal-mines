@@ -62,12 +62,8 @@ def render(minefield):
         else:
             total_safe = minefield.width * minefield.height - minefield.num_mines
             remain_safe = total_safe - len([cell for cell in minefield.cells if cell.state == CellState.SAFE or cell.state.value.isdigit()])
-            yield " {} / {} marked; {} safe {}".format(
-                minefield.count_cells_with_state(CellState.FLAGGED),
-                minefield.num_mines, 
-                remain_safe, 
-                "cell remains" if remain_safe == 1 else "cells remain"
-            )
+            remain_str = "cell remains" if remain_safe == 1 else "cells remain"
+            yield f" {minefield.count_cells_with_state(CellState.FLAGGED)} / {minefield.num_mines} marked; {remain_safe} safe {remain_str}"
 
     try:
         echo("\n".join(gen_lines()))

@@ -55,7 +55,7 @@ class Minefield:
         self.state = GameState.IN_PROGRESS
 
         self.rows = [
-            [Cell("{},{}".format(x, y) in mines) for x in range(width)] for y in range(height)
+            [Cell(f"{x},{y}" in mines) for x in range(width)] for y in range(height)
         ]
         self.first_move = True
 
@@ -179,8 +179,7 @@ def random_minefield(num_mines, width, height):
     :return: A new Minefield instance with a random set of mines.
     """
     mines = set()
-
     while len(mines) != num_mines:
-        mines.add("{},{}".format(randint(0, width - 1), randint(0, height - 1)))
+        mines.add(f"{randint(0, width - 1)},{randint(0, height - 1)}")
 
     return Minefield(width, height, mines)

@@ -57,7 +57,7 @@ def input_loop(handler_func):
 
 
 def demo_handler(key):
-    print("Processing {}".format(repr(key)))
+    print(f"Received {repr(key)}")
 
 
 if __name__ == "__main__":

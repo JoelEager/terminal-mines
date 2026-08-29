@@ -10,7 +10,7 @@ with open("README.md") as file:
 setup(
     name="terminal-mines",
     version="1.5",
-    python_requires="~=3.4",
+    python_requires="~=3.6",
     license="MIT",
     author="Joel Eager",
     description="A command-line clone of Minesweeper in Python",

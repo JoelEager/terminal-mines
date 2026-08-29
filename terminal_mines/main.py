@@ -26,7 +26,7 @@ class DifficultyParamType(click.ParamType):
         if value in DIFFICULTY_PRESETS:
             return DIFFICULTY_PRESETS[value]
         elif "," not in value:
-            self.fail("'{}' is not a valid difficulty name".format(value), param, ctx)
+            self.fail(f"'{value}' is not a valid difficulty name", param, ctx)
         else:
             try:
                 args = tuple(map(int, value.split(",")))
