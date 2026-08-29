@@ -6,7 +6,7 @@ import click
 
 from .game_model import random_minefield, Minefield, GameState
 from .keyboard_listener import input_loop
-from .renderer import render
+from .renderer import terminal_renderer
 from .solver import solve_game
 
 DIFFICULTY_PRESETS = {
@@ -102,24 +102,25 @@ def main(ctx, difficulty, solve, mines_file):
     if solve:
         solve_game(minefield)
     else:
-        def handle_key(key):
-            if key == "w":
-                minefield.y = (minefield.y - 1) % minefield.height
-            elif key == "s":
-                minefield.y = (minefield.y + 1) % minefield.height
-            elif key == "a":
-                minefield.x = (minefield.x - 1) % minefield.width
-            elif key == "d":
-                minefield.x = (minefield.x + 1) % minefield.width
-            elif key == "e" or key == "'":
-                minefield.flag_cell(minefield.x, minefield.y)
-            elif key == "\n" or key == " ":
-                minefield.reveal_cell(minefield.x, minefield.y)
+        with terminal_renderer() as render:
+            def handle_key(key):
+                if key == "w":
+                    minefield.y = (minefield.y - 1) % minefield.height
+                elif key == "s":
+                    minefield.y = (minefield.y + 1) % minefield.height
+                elif key == "a":
+                    minefield.x = (minefield.x - 1) % minefield.width
+                elif key == "d":
+                    minefield.x = (minefield.x + 1) % minefield.width
+                elif key == "e" or key == "'":
+                    minefield.flag_cell(minefield.x, minefield.y)
+                elif key == "\n" or key == " ":
+                    minefield.reveal_cell(minefield.x, minefield.y)
+
+                render(minefield)
+
+                if minefield.state != GameState.IN_PROGRESS:
+                    ctx.exit(0)
 
             render(minefield)
-
-            if minefield.state != GameState.IN_PROGRESS:
-                ctx.exit(0)
-
-        render(minefield)
-        input_loop(handle_key)
+            input_loop(handle_key)

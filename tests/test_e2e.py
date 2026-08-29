@@ -12,8 +12,7 @@ class TestE2E(unittest.TestCase):
         solver.all_guesses = -1
 
     @patch("terminal_mines.solver.sleep")
-    @patch("terminal_mines.renderer.clear")
-    def test_solve_deterministic_game(self, mock_clear, mock_sleep):
+    def test_solve_deterministic_game(self, mock_sleep):
         """
         Tests solving a board deterministically using a custom mines file.
         Verifies that the output contains 'Game won' and 'with no unsafe guesses.'.

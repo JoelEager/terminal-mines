@@ -29,7 +29,7 @@ def main(ctx, difficulty, mines_file, iterations):
     total_metrics = defaultdict(int)
     wins = 0
 
-    with patch("terminal_mines.solver.echo"), patch("terminal_mines.solver.sleep"), patch("terminal_mines.solver.render"), \
+    with patch("terminal_mines.solver.echo"), patch("terminal_mines.solver.sleep"), patch("terminal_mines.solver.terminal_renderer"), \
          click.progressbar(range(iterations), label="Solving games...") as bar:
         start = perf_counter()
 

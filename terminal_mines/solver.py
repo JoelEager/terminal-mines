@@ -10,12 +10,11 @@ from time import sleep
 from click import echo
 
 from .game_model import GameState, CellState
-from .renderer import render
+from .renderer import terminal_renderer
 
-# Set this environment variable to enable debug messages for non-obvious AI moves and show end of game metrics.
-# Use one of these values to additionally adjust the game loop:
-#   "slow" -> Pause after each debug message.
-#   "fast" -> Skip the animation delay so the AI runs at max speed.
+# Set this environment variable to enable debug messages for non-obvious AI moves, show end of game AI metrics, retain 
+# previous game frames in the scrollback buffer, and disable the animation delay so the AI runs at max speed. If set to 
+# "step" it will also pause after each debug message.
 AI_DEBUG_MODE = getenv("MINES_AI_DEBUG", False)
 
 
@@ -33,7 +32,7 @@ class Move:
 
 def pick_move(minefield):
     """
-    Returns the move the AI wants to take. First it attempts simple deduction. Then two cell deductive analysis. If 
+    Returns the move the AI wants to take. First it attempts simple deduction. Then two cell deductive analysis. If
     neither of those work it resorts to guessing.
     """
     # Utility lambdas for the AI:
@@ -133,60 +132,60 @@ def pick_move(minefield):
 
     if unknown_without_number_neighbors:
         shuffle(unknown_without_number_neighbors)
-        return Move(minefield.reveal_cell, unknown_without_number_neighbors[0][0], unknown_without_number_neighbors[0][1], 
+        return Move(minefield.reveal_cell, unknown_without_number_neighbors[0][0], unknown_without_number_neighbors[0][1],
                     metrics=["all_guesses"], debug=f"Greenfield guess ({base_risk_debug})")
-    
+
     shuffle(all_unknown)
     return Move(minefield.reveal_cell, all_unknown[0][0], all_unknown[0][1], metrics=["all_guesses"], debug=f"Fallback guess ({base_risk_debug})")
 
 
 def solve_game(minefield):
     """
-    Runs the AI against the given minefield. Renders game after each turn.
+    Runs the AI against the given minefield. Renders game after each move.
     """
-    render(minefield)
-
-    metrics = defaultdict(int)
-    while True:
-        if AI_DEBUG_MODE != "fast":
-            sleep(0.1)
-
-        # Make a move
-        move = pick_move(minefield)
-        move.func(move.x, move.y)
-
-        # Update the AI statistics
-        metrics["moves"] += 1
-        for metric in move.metrics:
-            metrics[metric] += 1
-
-        # Update the selected cell to indicate the move the AI just made
-        minefield.x = move.x
-        minefield.y = move.y
-         
-        # Render the updated game state
+    with terminal_renderer(overwrite=not AI_DEBUG_MODE) as render:
         render(minefield)
+        metrics = defaultdict(int)
+        while True:
+            if not AI_DEBUG_MODE:
+                sleep(0.1)
 
-        if AI_DEBUG_MODE and move.debug:
-            echo(f" Move({move.x}, {move.y}): {move.debug}")
-            if AI_DEBUG_MODE == "slow":
-                input(" Press Enter to continue...")
+            # Make a move
+            move = pick_move(minefield)
+            move.func(move.x, move.y)
 
-        if minefield.state != GameState.IN_PROGRESS:
-            if AI_DEBUG_MODE:
-                echo("\nMetrics:")
-                for metric, count in metrics.items():
-                    echo(f" {metric}: {count}")
-            else:
-                summary = f"\nThe AI made {metrics['moves']} moves "
-                if metrics["all_guesses"] == 0:
-                    summary += "with no guesses."
-                elif metrics["all_guesses"] == 1:
-                    summary += "of which 1 was a guess."
+            # Update the AI statistics
+            metrics["moves"] += 1
+            for metric in move.metrics:
+                metrics[metric] += 1
+
+            # Update the selected cell to indicate the move the AI just made
+            minefield.x = move.x
+            minefield.y = move.y
+
+            # Render the updated game state
+            render(minefield)
+
+            if AI_DEBUG_MODE and move.debug:
+                echo(f" Move({move.x}, {move.y}): {move.debug}")
+                if AI_DEBUG_MODE == "step":
+                    input(" Press Enter to continue...")
+
+            if minefield.state != GameState.IN_PROGRESS:
+                if AI_DEBUG_MODE:
+                    echo("\nMetrics:")
+                    for metric, count in metrics.items():
+                        echo(f" {metric}: {count}")
                 else:
-                    summary += f"of which {metrics['all_guesses']} were guesses."
-                if minefield.state == GameState.LOST:
-                    summary += " The last guess went poorly."
-                echo(summary)
+                    summary = f"\nThe AI made {metrics['moves']} moves "
+                    if metrics["all_guesses"] == 0:
+                        summary += "with no guesses."
+                    elif metrics["all_guesses"] == 1:
+                        summary += "of which 1 was a guess."
+                    else:
+                        summary += f"of which {metrics['all_guesses']} were guesses."
+                    if minefield.state == GameState.LOST:
+                        summary += " The last guess went poorly."
+                    echo(summary)
 
-            return metrics
+                return metrics
