@@ -10,8 +10,6 @@ from terminal_mines.mines import main
 class TestE2E(unittest.TestCase):
     def setUp(self):
         solver.all_guesses = -1
-        solver.two_cell_moves = 0
-        solver.low_risk_guesses = 0
 
     @patch("terminal_mines.game_logic.solver.sleep")
     @patch("terminal_mines.game_logic.renderer.clear")
@@ -22,12 +20,12 @@ class TestE2E(unittest.TestCase):
         """
         runner = CliRunner()
         with tempfile.NamedTemporaryFile("w+", delete=False) as tf:
-            tf.write("2,2\n")
+            tf.write("2,1\n2,3")
             tf.flush()
             mines_file_path = tf.name
 
         try:
-            result = runner.invoke(main, ["1,3,3", "--solve", "--mines", mines_file_path])
+            result = runner.invoke(main, ["2,5,5", "--solve", "--mines", mines_file_path])
             self.assertEqual(result.exit_code, 0)
             self.assertIn("Game won", result.output)
             self.assertIn("with no unsafe guesses.", result.output)
