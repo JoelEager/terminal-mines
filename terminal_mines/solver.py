@@ -2,6 +2,7 @@
 A simple minesweeper board solver. Includes logic to display moves as they are made.
 """
 
+from collections import defaultdict
 from os import getenv
 from random import shuffle
 from time import sleep
@@ -11,25 +12,22 @@ from click import echo
 from .game_model import GameState, CellState
 from .renderer import render
 
-# Set this environment variable to enable debug messages for non-obvious AI moves. Use one of these values to additionally adjust the game loop:
-#   "slow" -> Pause after each message.
+# Set this environment variable to enable debug messages for non-obvious AI moves and show end of game metrics.
+# Use one of these values to additionally adjust the game loop:
+#   "slow" -> Pause after each debug message.
 #   "fast" -> Skip the animation delay so the AI runs at max speed.
 AI_DEBUG_MODE = getenv("MINES_AI_DEBUG", False)
-
-# AI gameplay statistics
-two_cell_moves = 0
-low_risk_guesses = 0
-all_guesses = -1  # Don't count the first guess because it's safe
 
 
 class Move:
     """
     Models a move for the AI.
     """
-    def __init__(self, func, x, y, debug=None):
+    def __init__(self, func, x, y, metrics=[], debug=None):
         self.func = func
         self.x = x
         self.y = y
+        self.metrics = metrics
         self.debug = debug
 
 
@@ -38,8 +36,6 @@ def pick_move(minefield):
     Returns the move the AI wants to take. First it attempts simple deduction. Then two cell deductive analysis. If 
     neither of those work it resorts to guessing.
     """
-    global two_cell_moves, low_risk_guesses, all_guesses
-
     # Lambda: Iterate over revealed cells with at least 1 neighboring mine
     iter_revealed_nums = lambda: ((x, y, cell) for x, y, cell in minefield.cords_and_cells if cell.state.value.isdigit())
 
@@ -98,12 +94,10 @@ def pick_move(minefield):
 
                                 if remaining_mines_a - remaining_mines_b == len(unknown_a_not_b):
                                     # All unknown neighbors of A that are not neighbors of B must be mines
-                                    two_cell_moves += 1
-                                    return Move(minefield.flag_cell, *unknown_a_not_b.pop(), debug="Two cell flag; " + debug_details)
+                                    return Move(minefield.flag_cell, *unknown_a_not_b.pop(), metrics=["two_cell_moves"], debug="Two cell flag; " + debug_details)
                                 if remaining_mines_a - remaining_mines_b == 0:
                                     # All unknown neighbors of A that are not neighbors of B must be safe
-                                    two_cell_moves += 1
-                                    return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), debug="Two cell reveal; " + debug_details)
+                                    return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), metrics=["two_cell_moves"], debug="Two cell reveal; " + debug_details)
 
     # Look for a low risk guess
     num_flags = minefield.count_cells_with_state(CellState.FLAGGED)
@@ -129,17 +123,14 @@ def pick_move(minefield):
                         break
 
     if best_guess:
-        low_risk_guesses += 1
-        all_guesses += 1
-        return Move(minefield.reveal_cell, best_guess[0], best_guess[1], debug="Low risk guess of {} vs {}".format(risk, base_risk_debug))
+        return Move(minefield.reveal_cell, best_guess[0], best_guess[1], metrics=["low_risk_guesses", "all_guesses"], debug="Low risk guess of {} vs {}".format(risk, base_risk_debug))
 
     # If it's early in the game pick a corner to guess (which results in a better win probability)
     corners = [(0, 0), (0, minefield.height - 1), (minefield.width - 1, 0), (minefield.width - 1, minefield.height - 1)]
     unknown_corners = [(x, y) for x, y in corners if minefield.get_cell(x, y).state == CellState.UNKNOWN]
     if len(unknown_corners) > 2:
         shuffle(unknown_corners)
-        all_guesses += 1
-        return Move(minefield.reveal_cell, unknown_corners[0][0], unknown_corners[0][1], debug="Corner guess ({})".format(base_risk_debug))
+        return Move(minefield.reveal_cell, unknown_corners[0][0], unknown_corners[0][1], metrics=["all_guesses"], debug="Corner guess ({})".format(base_risk_debug))
 
     # Take a guess by revealing a random cell; preferably one not neighboring a revealed number
     all_unknown = [(x, y) for x, y, cell in minefield.cords_and_cells if cell.state == CellState.UNKNOWN]
@@ -147,12 +138,10 @@ def pick_move(minefield):
 
     if unknown_without_number_neighbors:
         shuffle(unknown_without_number_neighbors)
-        all_guesses += 1
-        return Move(minefield.reveal_cell, unknown_without_number_neighbors[0][0], unknown_without_number_neighbors[0][1], debug="Greenfield guess ({})".format(base_risk_debug))
+        return Move(minefield.reveal_cell, unknown_without_number_neighbors[0][0], unknown_without_number_neighbors[0][1], metrics=["all_guesses"], debug="Greenfield guess ({})".format(base_risk_debug))
     
     shuffle(all_unknown)
-    all_guesses += 1
-    return Move(minefield.reveal_cell, all_unknown[0][0], all_unknown[0][1], debug="Fallback guess ({})".format(base_risk_debug))
+    return Move(minefield.reveal_cell, all_unknown[0][0], all_unknown[0][1], metrics=["all_guesses"], debug="Fallback guess ({})".format(base_risk_debug))
 
 
 def solve_game(minefield):
@@ -162,6 +151,8 @@ def solve_game(minefield):
     render(minefield)
 
     moves = 0
+    metrics = defaultdict(int)
+
     while True:
         if AI_DEBUG_MODE != "fast":
             sleep(0.1)
@@ -169,7 +160,11 @@ def solve_game(minefield):
         # Make a move
         move = pick_move(minefield)
         move.func(move.x, move.y)
+
+        # Update the AI statistics
         moves += 1
+        for metric in move.metrics:
+            metrics[metric] += 1
 
         # Update the selected cell to indicate the move the AI just made
         minefield.x = move.x
@@ -185,24 +180,25 @@ def solve_game(minefield):
 
         if minefield.state != GameState.IN_PROGRESS:
             # Print the stats and return
+            unsafe_guesses = metrics["all_guesses"] - 1  # Don't count the first guess because it's safe
             summary = "\nThe AI made {} moves ".format(moves)
-            if all_guesses == 0:
+            if unsafe_guesses == 0:
                 summary += "with no unsafe guesses."
-            elif all_guesses == 1:
+            elif unsafe_guesses == 1:
                 summary += "of which 1 was an unsafe guess"
                 if minefield.state == GameState.LOST:
                     summary += " and went poorly."
                 else:
                     summary += "."
             else:
-                summary += "of which {} were unsafe guesses.".format(all_guesses)
+                summary += "of which {} were unsafe guesses.".format(unsafe_guesses)
                 if minefield.state == GameState.LOST:
                     summary += " One of those guesses went poorly."
             echo(summary)
 
             if AI_DEBUG_MODE:
-                echo("\nDebug stats:")
-                echo("   {} two cell analyses".format(two_cell_moves))
-                echo("   {} low-risk guesses".format(low_risk_guesses))
+                echo("\nMetrics:")
+                for metric, count in metrics.items():
+                    echo(" {}: {}".format(metric, count))
 
             return
