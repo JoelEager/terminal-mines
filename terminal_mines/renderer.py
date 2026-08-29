@@ -6,7 +6,7 @@ from itertools import chain
 
 from click import clear, style, echo, get_current_context
 
-from .game_model import UNREVEALED_CELL_STATES, GameState, CellState
+from .game_model import GameState, CellState
 
 fg_mapping = {
     CellState.FLAGGED: "bright_green",

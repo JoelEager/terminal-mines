@@ -1,12 +1,12 @@
 import unittest
 from unittest.mock import patch
-from terminal_mines.game_logic.game_model import Minefield, CellState, GameState
-from terminal_mines.game_logic.renderer import render
+from terminal_mines.game_model import Minefield, CellState, GameState
+from terminal_mines.renderer import render
 
 
 class TestRenderer(unittest.TestCase):
-    @patch("terminal_mines.game_logic.renderer.clear")
-    @patch("terminal_mines.game_logic.renderer.echo")
+    @patch("terminal_mines.renderer.clear")
+    @patch("terminal_mines.renderer.echo")
     def test_render_in_progress(self, mock_echo, mock_clear):
         minefield = Minefield(2, 2, {"0,0"})
         render(minefield)
@@ -20,8 +20,8 @@ class TestRenderer(unittest.TestCase):
         self.assertIn("└─────┘", rendered_output)
         self.assertIn("0 / 1 marked; 3 safe cells remain", rendered_output)
 
-    @patch("terminal_mines.game_logic.renderer.clear")
-    @patch("terminal_mines.game_logic.renderer.echo")
+    @patch("terminal_mines.renderer.clear")
+    @patch("terminal_mines.renderer.echo")
     def test_render_in_progress_one_safe_cell_remains(self, mock_echo, mock_clear):
         minefield = Minefield(2, 2, {"0,0"})
 
@@ -34,8 +34,8 @@ class TestRenderer(unittest.TestCase):
         rendered_output = mock_echo.call_args[0][0]
         self.assertIn("0 / 1 marked; 1 safe cell remains", rendered_output)
 
-    @patch("terminal_mines.game_logic.renderer.clear")
-    @patch("terminal_mines.game_logic.renderer.echo")
+    @patch("terminal_mines.renderer.clear")
+    @patch("terminal_mines.renderer.echo")
     def test_render_won(self, mock_echo, mock_clear):
         minefield = Minefield(2, 2, {"0,0"})
         minefield.reveal_cell(1, 0)
@@ -48,8 +48,8 @@ class TestRenderer(unittest.TestCase):
         rendered_output = mock_echo.call_args[0][0]
         self.assertIn("Game won", rendered_output)
 
-    @patch("terminal_mines.game_logic.renderer.clear")
-    @patch("terminal_mines.game_logic.renderer.echo")
+    @patch("terminal_mines.renderer.clear")
+    @patch("terminal_mines.renderer.echo")
     def test_render_lost(self, mock_echo, mock_clear):
         minefield = Minefield(2, 2, {"0,0"})
         minefield.reveal_cell(1, 1)
@@ -61,8 +61,8 @@ class TestRenderer(unittest.TestCase):
         rendered_output = mock_echo.call_args[0][0]
         self.assertIn("Game lost", rendered_output)
 
-    @patch("terminal_mines.game_logic.renderer.clear")
-    @patch("terminal_mines.game_logic.renderer.echo")
+    @patch("terminal_mines.renderer.clear")
+    @patch("terminal_mines.renderer.echo")
     def test_render_incorrect_flag(self, mock_echo, mock_clear):
         # 2x2 board, mine at (0,0)
         # Flag at (1,1) (which is NOT a mine) and lose game by hitting (0,0)

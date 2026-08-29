@@ -4,7 +4,10 @@ Entry point and CLI implementation for terminal-mines.
 
 import click
 
-from .game_logic import random_minefield, Minefield, GameState, input_loop, render, solve_game
+from .game_model import random_minefield, Minefield, GameState
+from .keyboard_listener import input_loop
+from .renderer import render
+from .solver import solve_game
 
 DIFFICULTY_PRESETS = {
     "balanced": (35, 20, 15),

@@ -23,7 +23,7 @@ setup(
     ],
     entry_points="""
         [console_scripts]
-        mines=terminal_mines.mines:main
+        mines=terminal_mines.main:main
     """,
     classifiers=[
         "Topic :: Games/Entertainment :: Puzzle Games",

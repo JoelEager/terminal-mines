@@ -1,6 +1,6 @@
 import unittest
-from terminal_mines.game_logic.game_model import Minefield, CellState
-from terminal_mines.game_logic.solver import pick_move
+from terminal_mines.game_model import Minefield, CellState
+from terminal_mines.solver import pick_move
 
 
 class TestSolverDeterministicStrategies(unittest.TestCase):

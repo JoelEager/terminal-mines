@@ -1,5 +1,5 @@
 import unittest
-from terminal_mines.game_logic.game_model import (
+from terminal_mines.game_model import (
     Cell, CellState, GameState, Minefield, random_minefield
 )
 

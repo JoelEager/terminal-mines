@@ -3,16 +3,16 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from click.testing import CliRunner
-import terminal_mines.game_logic.solver as solver
-from terminal_mines.mines import main
+import terminal_mines.solver as solver
+from terminal_mines.main import main
 
 
 class TestE2E(unittest.TestCase):
     def setUp(self):
         solver.all_guesses = -1
 
-    @patch("terminal_mines.game_logic.solver.sleep")
-    @patch("terminal_mines.game_logic.renderer.clear")
+    @patch("terminal_mines.solver.sleep")
+    @patch("terminal_mines.renderer.clear")
     def test_solve_deterministic_game(self, mock_clear, mock_sleep):
         """
         Tests solving a board deterministically using a custom mines file.

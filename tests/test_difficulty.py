@@ -1,6 +1,6 @@
 import unittest
 import click
-from terminal_mines.mines import DifficultyParamType, DIFFICULTY_PRESETS
+from terminal_mines.main import DifficultyParamType, DIFFICULTY_PRESETS
 
 
 class TestDifficultyParamType(unittest.TestCase):
