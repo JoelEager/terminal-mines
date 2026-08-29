@@ -53,12 +53,12 @@ class TestDifficultyParamType(unittest.TestCase):
 
     def test_board_size_limit_exceeded(self):
         with self.assertRaises(click.BadParameter) as cm:
-            self.param_type.convert("10,51,10", None, None)
-        self.assertIn("the game board cannot be larger than 50 cells on either side", str(cm.exception))
+            self.param_type.convert("10,31,10", None, None)
+        self.assertIn("the game board cannot be larger than 30 cells on either side", str(cm.exception))
 
         with self.assertRaises(click.BadParameter) as cm:
             self.param_type.convert("10,10,51", None, None)
-        self.assertIn("the game board cannot be larger than 50 cells on either side", str(cm.exception))
+        self.assertIn("the game board cannot be larger than 30 cells on either side", str(cm.exception))
 
     def test_too_many_mines(self):
         with self.assertRaises(click.BadParameter) as cm:
