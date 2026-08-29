@@ -18,6 +18,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/JoelEager/terminal-mines",
     packages=find_packages(exclude=["tests"]),
+    exclude_package_data={"": ["solver_harness.py"]},
     install_requires=[
         "click>=7.0",
     ],

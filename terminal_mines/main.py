@@ -45,6 +45,20 @@ class DifficultyParamType(click.ParamType):
                 self.fail("a custom difficulty must be made of 3 positive integers separated by commas", param, ctx)
 
 
+def create_minefield(ctx, difficulty, mines_file):
+    """
+    Creates a Minefield instance using a difficulty tuple and optional mines file.
+    """
+    if mines_file:
+        mines = set(map(lambda line: line.strip(), mines_file))
+        minefield = Minefield(difficulty[1], difficulty[2], mines)
+        if minefield.num_mines == 0:
+            ctx.fail("Mines file did not contain any valid mines")
+        return minefield
+    
+    return random_minefield(*difficulty)
+
+
 @click.command(context_settings=dict(help_option_names=["-h", "--help"]))
 @click.pass_context
 @click.argument("difficulty", default="balanced", type=DifficultyParamType())
@@ -83,14 +97,7 @@ def main(ctx, difficulty, solve, mines_file):
     "number of mines" portion of the difficulty setting will be ignored. If the first move would reveal a mine it will
     be relocated to a random cell that does not contain a mine.
     """
-    if mines_file:
-        mines = set(map(lambda line: line.strip(), mines_file))
-        minefield = Minefield(difficulty[1], difficulty[2], mines)
-
-        if minefield.num_mines == 0:
-            ctx.fail("Mines file did not contain any valid mines")
-    else:
-        minefield = random_minefield(*difficulty)
+    minefield = create_minefield(ctx, difficulty, mines_file)
 
     if solve:
         solve_game(minefield)
