@@ -7,7 +7,7 @@ from terminal_mines.renderer import render
 class TestRenderer(unittest.TestCase):
     @patch("terminal_mines.renderer.clear")
     @patch("terminal_mines.renderer.echo")
-    def test_render_in_progress(self, mock_echo, mock_clear):
+    def test_render_start(self, mock_echo, mock_clear):
         minefield = Minefield(2, 2, {"0,0"})
         render(minefield)
 
@@ -18,12 +18,13 @@ class TestRenderer(unittest.TestCase):
         # Check borders and state line for in progress
         self.assertIn("┌─────┐", rendered_output)
         self.assertIn("└─────┘", rendered_output)
-        self.assertIn("0 / 1 marked; 3 safe cells remain", rendered_output)
+        self.assertIn("First reveal is always safe", rendered_output)
 
     @patch("terminal_mines.renderer.clear")
     @patch("terminal_mines.renderer.echo")
     def test_render_in_progress_one_safe_cell_remains(self, mock_echo, mock_clear):
         minefield = Minefield(2, 2, {"0,0"})
+        minefield.first_move = False
         minefield.get_cell(1, 0).state = CellState.SAFE
         minefield.get_cell(0, 1).state = CellState.WARN1
 

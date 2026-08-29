@@ -12,6 +12,7 @@ class TestSolverDeterministicStrategies(unittest.TestCase):
         # 2x2 board, mine at (0,0)
         # Reveal (1,0), (0,1), (1,1) as WARN1 ('1')
         minefield = Minefield(2, 2, {"0,0"})
+        minefield.first_move = False
         minefield.get_cell(1, 0).state = CellState.WARN1
         minefield.get_cell(0, 1).state = CellState.WARN1
         minefield.get_cell(1, 1).state = CellState.WARN1
@@ -29,6 +30,7 @@ class TestSolverDeterministicStrategies(unittest.TestCase):
         # Flag (0,0)
         # Reveal (1,0) as WARN1 ('1')
         minefield = Minefield(2, 2, {"0,0"})
+        minefield.first_move = False
         minefield.flag_cell(0, 0)
         minefield.get_cell(1, 0).state = CellState.WARN1
 
@@ -45,7 +47,7 @@ class TestSolverDeterministicStrategies(unittest.TestCase):
         The extra neighbor (2,0) must be a mine -> flag (2,0).
         """
         minefield = Minefield(3, 2, {"0,0", "2,0"})
-        # Setup revealed numbers
+        minefield.first_move = False
         minefield.get_cell(0, 1).state = CellState.WARN1
         minefield.get_cell(1, 1).state = CellState.WARN2
         minefield.get_cell(2, 1).state = CellState.WARN1
@@ -63,7 +65,7 @@ class TestSolverDeterministicStrategies(unittest.TestCase):
         The extra neighbor (2,0) must be safe -> reveal (2,0).
         """
         minefield = Minefield(3, 2, {"0,0"})
-        # Setup revealed numbers
+        minefield.first_move = False
         minefield.get_cell(0, 1).state = CellState.WARN1
         minefield.get_cell(1, 1).state = CellState.WARN1
         minefield.get_cell(2, 1).state = CellState.WARN1

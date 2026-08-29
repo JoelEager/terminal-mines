@@ -28,7 +28,7 @@ class TestE2E(unittest.TestCase):
             result = runner.invoke(main, ["2,5,5", "--solve", "--mines", mines_file_path])
             self.assertEqual(result.exit_code, 0)
             self.assertIn("Game won", result.output)
-            self.assertIn("with no unsafe guesses.", result.output)
+            self.assertIn("with no guesses.", result.output)
         finally:
             if os.path.exists(mines_file_path):
                 os.remove(mines_file_path)

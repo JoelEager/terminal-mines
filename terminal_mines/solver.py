@@ -4,7 +4,7 @@ A simple minesweeper board solver. Includes logic to display moves as they are m
 
 from collections import defaultdict
 from os import getenv
-from random import shuffle
+from random import shuffle, choice
 from time import sleep
 
 from click import echo
@@ -21,7 +21,7 @@ AI_DEBUG_MODE = getenv("MINES_AI_DEBUG", False)
 
 class Move:
     """
-    Models a move for the AI.
+    Models a move for the AI. Includes optional fields for reporting metrics and debugging messages about the selected move.
     """
     def __init__(self, func, x, y, metrics=[], debug=None):
         self.func = func
@@ -36,23 +36,25 @@ def pick_move(minefield):
     Returns the move the AI wants to take. First it attempts simple deduction. Then two cell deductive analysis. If 
     neither of those work it resorts to guessing.
     """
-    # Lambda: Iterate over revealed cells with at least 1 neighboring mine
+    # Utility lambdas for the AI:
+    #   Iterate over revealed cells with at least 1 neighboring mine
     iter_revealed_nums = lambda: ((x, y, cell) for x, y, cell in minefield.cords_and_cells if cell.state.value.isdigit())
-
-    # Lambda: Iterate over the unknown neighbors of a given cell
+    #   Iterate over the unknown neighbors of a given cell
     iter_unknown_neighbors = lambda x, y: (
         (neighbor_x, neighbor_y) for neighbor_x, neighbor_y in minefield.neighboring_cords(x, y)
         if minefield.get_cell(neighbor_x, neighbor_y).state == CellState.UNKNOWN
     )
-
-    # Lambda: The number of mines visible to a revealed number cell
+    #   Count the number of mines visible to a revealed number cell
     count_visible_mines = lambda cell: int(cell.state.value)
-
-    # Lambda: Count the number of flagged neighbors
+    #   Count the number of flagged neighbors
     count_flagged_neighbors = lambda x, y: len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.FLAGGED])
-
-    # Lambda: Count the number of neighbors with a number state
+    #   Count the number of neighbors with a number state
     count_number_neighbors = lambda x, y: len([cell for cell in minefield.neighbors(x, y) if cell.state.value.isdigit()])
+
+    # Pick a corner for the first move (which results in a better win probability)
+    if minefield.first_move:
+        x, y = choice([(0, 0), (0, minefield.height - 1), (minefield.width - 1, 0), (minefield.width - 1, minefield.height - 1)])
+        return Move(minefield.reveal_cell, x, y)
 
     # If possible, place a flag via simple deduction
     for x, y, cell in iter_revealed_nums():
@@ -125,13 +127,6 @@ def pick_move(minefield):
     if best_guess:
         return Move(minefield.reveal_cell, best_guess[0], best_guess[1], metrics=["low_risk_guesses", "all_guesses"], debug="Low risk guess of {} vs {}".format(risk, base_risk_debug))
 
-    # If it's early in the game pick a corner to guess (which results in a better win probability)
-    corners = [(0, 0), (0, minefield.height - 1), (minefield.width - 1, 0), (minefield.width - 1, minefield.height - 1)]
-    unknown_corners = [(x, y) for x, y in corners if minefield.get_cell(x, y).state == CellState.UNKNOWN]
-    if len(unknown_corners) > 2:
-        shuffle(unknown_corners)
-        return Move(minefield.reveal_cell, unknown_corners[0][0], unknown_corners[0][1], metrics=["all_guesses"], debug="Corner guess ({})".format(base_risk_debug))
-
     # Take a guess by revealing a random cell; preferably one not neighboring a revealed number
     all_unknown = [(x, y) for x, y, cell in minefield.cords_and_cells if cell.state == CellState.UNKNOWN]
     unknown_without_number_neighbors = [(x, y) for x, y in all_unknown if count_number_neighbors(x, y) == 0]
@@ -150,9 +145,7 @@ def solve_game(minefield):
     """
     render(minefield)
 
-    moves = 0
     metrics = defaultdict(int)
-
     while True:
         if AI_DEBUG_MODE != "fast":
             sleep(0.1)
@@ -162,7 +155,7 @@ def solve_game(minefield):
         move.func(move.x, move.y)
 
         # Update the AI statistics
-        moves += 1
+        metrics["moves"] += 1
         for metric in move.metrics:
             metrics[metric] += 1
 
@@ -179,26 +172,21 @@ def solve_game(minefield):
                 input(" Press Enter to continue...")
 
         if minefield.state != GameState.IN_PROGRESS:
-            # Print the stats and return
-            unsafe_guesses = metrics["all_guesses"] - 1  # Don't count the first guess because it's safe
-            summary = "\nThe AI made {} moves ".format(moves)
-            if unsafe_guesses == 0:
-                summary += "with no unsafe guesses."
-            elif unsafe_guesses == 1:
-                summary += "of which 1 was an unsafe guess"
-                if minefield.state == GameState.LOST:
-                    summary += " and went poorly."
-                else:
-                    summary += "."
-            else:
-                summary += "of which {} were unsafe guesses.".format(unsafe_guesses)
-                if minefield.state == GameState.LOST:
-                    summary += " One of those guesses went poorly."
-            echo(summary)
-
             if AI_DEBUG_MODE:
                 echo("\nMetrics:")
                 for metric, count in metrics.items():
                     echo(" {}: {}".format(metric, count))
+            else:
+                guesses = metrics["all_guesses"]
+                summary = "\nThe AI made {} moves ".format(metrics["moves"])
+                if guesses == 0:
+                    summary += "with no guesses."
+                elif guesses == 1:
+                    summary += "of which 1 was a guess."
+                else:
+                    summary += "of which {} were guesses.".format(guesses)
+                if minefield.state == GameState.LOST:
+                    summary += " The last guess went poorly."
+                echo(summary)
 
-            return
+            return metrics

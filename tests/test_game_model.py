@@ -9,11 +9,9 @@ class TestCell(unittest.TestCase):
         cell_mine = Cell(is_mine=True)
         self.assertTrue(cell_mine.is_mine)
         self.assertEqual(cell_mine.state, CellState.UNKNOWN)
-        self.assertEqual(repr(cell_mine), "Cell(True, ?)")
 
         cell_safe = Cell(is_mine=False)
         self.assertFalse(cell_safe.is_mine)
-        self.assertEqual(repr(cell_safe), "Cell(False, ?)")
 
 
 class TestMinefield(unittest.TestCase):
@@ -26,7 +24,6 @@ class TestMinefield(unittest.TestCase):
         self.assertEqual(minefield.x, 0)
         self.assertEqual(minefield.y, 0)
         self.assertEqual(minefield.state, GameState.IN_PROGRESS)
-        self.assertEqual(repr(minefield), "Minefield(3, 3)")
         self.assertEqual(minefield.num_mines, 2)
         self.assertEqual(minefield.flags_remaining, 2)
 

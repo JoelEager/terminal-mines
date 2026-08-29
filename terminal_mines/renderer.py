@@ -57,6 +57,8 @@ def render(minefield):
             yield " Game won"
         elif minefield.state == GameState.LOST:
             yield " Game lost"
+        elif minefield.first_move:
+            yield " First reveal is always safe"
         else:
             total_safe = minefield.width * minefield.height - minefield.num_mines
             remain_safe = total_safe - len([cell for cell in minefield.cells if cell.state == CellState.SAFE or cell.state.value.isdigit()])

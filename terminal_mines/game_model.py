@@ -38,9 +38,6 @@ class Cell:
         self.is_mine = is_mine
         self.state = CellState.UNKNOWN
 
-    def __repr__(self):
-        return "{}({}, {})".format(type(self).__name__, self.is_mine, self.state.value)
-
 
 class Minefield:
     """
@@ -60,10 +57,7 @@ class Minefield:
         self.rows = [
             [Cell("{},{}".format(x, y) in mines) for x in range(width)] for y in range(height)
         ]
-        self._first_move = True
-
-    def __repr__(self):
-        return "{}({}, {})".format(type(self).__name__, self.width, self.height)
+        self.first_move = True
 
     @property
     def cells(self):
@@ -129,8 +123,8 @@ class Minefield:
             return
 
         # If this is the first move, and the target cell is a mine, relocate it to a random cell that does not contain a mine
-        if not recursing and self._first_move:
-            self._first_move = False
+        if not recursing and self.first_move:
+            self.first_move = False
             if target.is_mine:
                 target.is_mine = False
                 available_cells = [cell for cell in self.cells if not cell.is_mine and cell != target]
