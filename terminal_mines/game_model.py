@@ -32,7 +32,11 @@ class GameState(Enum):
 
 class Cell:
     """
-    Represents one cell on the game board. The state is shown to the user while the is_mine value is used internally.
+    Represents one cell on the game board.
+    
+    Player facing code (implemented in renderer.py and solver.py) is allowed to read cell.state, but while the game 
+    state is IN_PROGRESS it should not read cell.is_mine other than by calling minefield.reveal_cell() or reading 
+    minefield.num_mines.
     """
     def __init__(self, is_mine):
         self.is_mine = is_mine
@@ -122,8 +126,8 @@ class Minefield:
         if target.state != CellState.UNKNOWN:
             return
 
-        # If this is the first move, and the target cell is a mine, relocate it to a random cell that does not contain a mine
-        if not recursing and self.first_move:
+        # If this is the first move, and the target cell is a mine then relocate it to a random cell that does not contain a mine
+        if self.first_move:
             self.first_move = False
             if target.is_mine:
                 target.is_mine = False
@@ -133,8 +137,6 @@ class Minefield:
 
         if target.is_mine:
             # Game lost; update all un-flagged mines as exploded
-            target.state = CellState.EXPLODED
-            
             for cell in self.cells:
                 if cell.state == CellState.UNKNOWN and cell.is_mine:
                     cell.state = CellState.EXPLODED

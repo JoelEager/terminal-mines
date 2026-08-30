@@ -45,7 +45,9 @@ def main(ctx, difficulty, mines_file, iterations):
 
         end = perf_counter()
     click.echo(f"Completed in {end - start:.1f} seconds. Win rate: {wins / iterations * 100:.1f}%")
-    click.echo("Average metrics: " + ", ".join(f"{metric}={total / iterations:.2f}" for metric, total in total_metrics.items()))
+    click.echo("Average metrics: " + ", ".join(
+        f"{metric}={total / iterations:.2f}" for metric, total in sorted(total_metrics.items())
+    ))
 
 
 if __name__ == "__main__":

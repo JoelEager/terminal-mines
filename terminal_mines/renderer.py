@@ -1,5 +1,5 @@
 """
-Handles the rendering of the game state to the console.
+Handles the rendering of the game state to the terminal.
 """
 
 from contextlib import contextmanager
@@ -75,8 +75,8 @@ def generate_lines(minefield):
 @contextmanager
 def terminal_renderer(overwrite=True):
     """
-    Setup and tear down game rendering via ANSI escape sequences. If overwrite is disabled previous game frames will be 
-    left in the scrollback buffer.
+    Setup and tear down game rendering via ANSI escape sequences. If overwrite is disabled then previous game frames 
+    will be left in the scrollback buffer.
     """
     def render(minefield):
         """

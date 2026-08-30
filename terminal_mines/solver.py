@@ -1,5 +1,5 @@
 """
-A simple minesweeper board solver. Includes logic to display moves as they are made.
+A simple minesweeper board solver. Includes a gameplay animation loop to display moves as they are made.
 """
 
 from collections import defaultdict
@@ -25,7 +25,7 @@ count_neighboring_numbers = lambda minefield, x, y: len([cell for cell in minefi
 
 class Move:
     """
-    Models a move for the AI. Includes optional fields for reporting metrics and debugging messages about the selected move.
+    Models a move for the AI. Includes optional fields for reporting metrics and debug messages about the selected move.
     """
     def __init__(self, func, x, y, metrics=[], debug=None):
         self.func = func
@@ -38,7 +38,7 @@ class Move:
 def pick_move(minefield):
     """
     Returns the move the AI wants to take. First it attempts simple deduction. Then two cell deductive analysis. If
-    neither of those work it resorts to guessing.
+    neither of those work then it resorts to guessing.
     """
     # Pick a corner for the first move
     if minefield.first_move:
@@ -129,7 +129,7 @@ def pick_move(minefield):
 
 def solve_game(minefield):
     """
-    Runs the AI against the given minefield. Renders game after each move.
+    Runs the AI against the given minefield. Renders the game after each move.
     """
     with terminal_renderer(overwrite=not AI_DEBUG_MODE) as render:
         render(minefield)
@@ -159,6 +159,7 @@ def solve_game(minefield):
                 if AI_DEBUG_MODE == "step":
                     input(" Press Enter to continue...")
 
+            # Show additional end of game message(s)
             if minefield.state != GameState.IN_PROGRESS:
                 if AI_DEBUG_MODE:
                     echo("\nMetrics:")

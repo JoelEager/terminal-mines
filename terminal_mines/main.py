@@ -1,5 +1,5 @@
 """
-Entry point and CLI implementation for terminal-mines.
+Entry point and CLI implementation for Terminal Mines.
 """
 
 import click
