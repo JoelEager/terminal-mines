@@ -12,6 +12,7 @@ from .solver import solve_game
 DIFFICULTY_PRESETS = {
     "balanced": (35, 20, 15),
     "challenging": (70, 25, 20),
+    "max": (150, 30, 30),
     "easy": (10, 8, 8),
     "intermediate": (40, 16, 16),
     "expert": (99, 16, 30)
@@ -84,6 +85,7 @@ def main(ctx, difficulty, solve, mines_file):
     Terminal Mines difficulties:
     - balanced: A 20x15 board with 35 mines
     - challenging: A 25x20 board with 70 mines
+    - max: A 30x30 board with 150 mines
 
     \b
     Official Minesweeper difficulties:

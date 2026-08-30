@@ -11,7 +11,7 @@ Once installed, use the `mines` command to start a new game.
 **For help, controls, and usage run `mines --help` after installing.**
 
 ## Change log
-- **v2.0**: Overhaul rendering to remove flicker and preserve scrollback buffer. Smarter AI solver and more bug fixes.
+- **v2.0**: Overhaul rendering to remove flicker and preserve scrollback buffer. Smarter AI solver, bug fixes, UI improvements, and a new difficulty preset.
 - **v1.5**: Bug fixes for game status message and win detection.
 - **v1.4**: Use the official Minesweeper win definition and ensure that the first move is always safe. Improve game status message.
 - **v1.3**: Add simple AI solver.
