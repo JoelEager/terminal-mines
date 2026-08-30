@@ -18,7 +18,7 @@ from terminal_mines.game_model import GameState
 @click.pass_context
 @click.argument("difficulty", default="balanced", type=DifficultyParamType())
 @click.option("-m", "--mines", "mines_file", type=click.File(), help="Provide a file containing custom mine placements.")
-@click.option("-i", "--iterations", default=100, type=int, help="Number of iterations to run the solver.")
+@click.option("-i", "--iterations", default=1000, type=int, help="Number of iterations to run the solver.")
 def main(ctx, difficulty, mines_file, iterations):
     """
     Run the Terminal Mines AI solver repeatedly with the given game generation arguments. Reports the win rate and average metrics.
