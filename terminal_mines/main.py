@@ -37,13 +37,13 @@ class DifficultyParamType(click.ParamType):
                 elif args[0] <= 0 or args[1] <= 0 or args[2] <= 0:
                     raise ValueError
                 elif args[1] > 30 or args[2] > 30:
-                    self.fail("the game board cannot be larger than 30 cells on either side", param, ctx)
+                    self.fail("The game board cannot be larger than 30 cells on either side", param, ctx)
                 elif args[0] >= args[1] * args[2]:
-                    self.fail("the game board must have at least one safe cell", param, ctx)
+                    self.fail("The game board must have at least one safe cell", param, ctx)
 
                 return args
             except ValueError:
-                self.fail("a custom difficulty must be made of 3 positive integers separated by commas", param, ctx)
+                self.fail("A custom difficulty must be made of 3 positive integers separated by commas", param, ctx)
 
 
 def create_minefield(ctx, difficulty, mines_file):
@@ -54,7 +54,7 @@ def create_minefield(ctx, difficulty, mines_file):
         mines = set(map(lambda line: line.strip(), mines_file))
         minefield = Minefield(difficulty[1], difficulty[2], mines)
         if minefield.num_mines == 0:
-            ctx.fail("Mines file did not contain any valid mines")
+            ctx.fail("Mines file does not contain any valid mines")
         return minefield
     
     return random_minefield(*difficulty)
@@ -63,8 +63,8 @@ def create_minefield(ctx, difficulty, mines_file):
 @click.command(context_settings=dict(help_option_names=["-h", "--help"]))
 @click.pass_context
 @click.argument("difficulty", default="balanced", type=DifficultyParamType())
-@click.option("--solve", is_flag=True, help="Watch the included AI attempt to solve the minefield.")
-@click.option("mines_file", "--mines", type=click.File(), help="Provide a file containing custom mine placements.")
+@click.option("-s", "--solve", is_flag=True, help="Watch the included AI attempt to solve the minefield.")
+@click.option("-m", "--mines", "mines_file", type=click.File(), help="Provide a file containing custom mine placements.")
 def main(ctx, difficulty, solve, mines_file):
     """
     Terminal Mines
