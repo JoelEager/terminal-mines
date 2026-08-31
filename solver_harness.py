@@ -4,6 +4,7 @@ Dev tool for aggregating AI solver results.
 """
 
 from collections import defaultdict
+from contextlib import contextmanager
 from time import perf_counter
 from unittest.mock import patch
 import multiprocessing
@@ -16,8 +17,19 @@ from terminal_mines.solver import solve_game
 from terminal_mines.game_model import GameState
 
 
+@contextmanager
+def dummy_renderer(*args, **kwargs):
+    yield lambda *args, **kwargs: None
+
+
+def dummy_func(*args, **kwargs):
+    pass
+
+
 def worker_func(num_iterations, difficulty, mines_lines, queue):
-    with patch("terminal_mines.solver.echo"), patch("terminal_mines.solver.sleep"), patch("terminal_mines.solver.terminal_renderer"):
+    with patch("terminal_mines.solver.echo", dummy_func), \
+         patch("terminal_mines.solver.sleep", dummy_func), \
+         patch("terminal_mines.solver.terminal_renderer", dummy_renderer):
         wins = 0
         total_metrics = defaultdict(int)
 
