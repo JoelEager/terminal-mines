@@ -13,9 +13,9 @@ DIFFICULTY_PRESETS = {
     "balanced": (35, 20, 15),
     "challenging": (70, 25, 20),
     "max": (150, 30, 30),
-    "easy": (10, 8, 8),
+    "beginner": (10, 9, 9),
     "intermediate": (40, 16, 16),
-    "expert": (99, 16, 30)
+    "expert": (99, 30, 16)
 }
 
 
@@ -88,10 +88,10 @@ def main(ctx, difficulty, solve, mines_file):
     - max: A 30x30 board with 150 mines
 
     \b
-    Official Minesweeper difficulties:
-    - easy: A 8x8 board with 10 mines
+    Original Microsoft Minesweeper difficulties:
+    - beginner: A 9x9 board with 10 mines
     - intermediate: A 16x16 board with 40 mines
-    - expert: A 16x30 board with 99 mines
+    - expert: A 30x16 board with 99 mines
 
     The mines file (if provided) is used to control the placement of mines. It must be a CSV where each line is of the
     form "<x>,<y>". Both coordinates are 0-based and count from the top-left corner of the game board. If any of the
