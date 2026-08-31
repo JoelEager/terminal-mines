@@ -4,10 +4,10 @@ Dev tool for aggregating AI solver results.
 """
 
 from collections import defaultdict
-import multiprocessing
-import os
 from time import perf_counter
 from unittest.mock import patch
+import multiprocessing
+import os
 
 import click
 
@@ -16,16 +16,12 @@ from terminal_mines.solver import solve_game
 from terminal_mines.game_model import GameState
 
 
-def worker_func(worker_id, num_iterations, difficulty, mines_lines, queue):
-    if num_iterations == 0:
-        queue.put(("done", worker_id, 0, {}))
-        return
-
+def worker_func(num_iterations, difficulty, mines_lines, queue):
     with patch("terminal_mines.solver.echo"), patch("terminal_mines.solver.sleep"), patch("terminal_mines.solver.terminal_renderer"):
         wins = 0
         total_metrics = defaultdict(int)
 
-        for _ in range(num_iterations):
+        for index in range(num_iterations):
             minefield = create_minefield(None, difficulty, mines_lines)
             metrics = solve_game(minefield)
 
@@ -35,9 +31,10 @@ def worker_func(worker_id, num_iterations, difficulty, mines_lines, queue):
             for metric, count in metrics.items():
                 total_metrics[metric] += count
 
-            queue.put(("progress", worker_id, 1))
+            if index < num_iterations - 1:
+                queue.put(("progress",))
 
-        queue.put(("done", worker_id, wins, dict(total_metrics)))
+        queue.put(("done", wins, dict(total_metrics)))
 
 
 @click.command(context_settings=dict(help_option_names=["-h", "--help"]))
@@ -57,54 +54,49 @@ def main(ctx, difficulty, mines_file, iterations):
     # Validate mines file / difficulty combination prior to spawning subprocesses
     create_minefield(ctx, difficulty, mines_lines)
 
-    num_workers = os.cpu_count() or 1
+    num_workers = os.cpu_count() or 2
     base_iterations = iterations // num_workers
     remainder = iterations % num_workers
-    worker_iterations = [base_iterations + (1 if i < remainder else 0) for i in range(num_workers)]
+    worker_iterations = [base_iterations + (1 if index < remainder else 0) for index in range(num_workers)]
 
-    queue = multiprocessing.Queue()
-    processes = []
-    progress_bars = [
-        click.progressbar(length=count, label=f"Worker {i + 1}")
-        for i, count in enumerate(worker_iterations)
-    ]
-
-    for bar in progress_bars:
-        bar.__enter__()
-
-    start = perf_counter()
-
-    for i in range(num_workers):
-        p = multiprocessing.Process(
-            target=worker_func,
-            args=(i, worker_iterations[i], difficulty, mines_lines, queue)
-        )
-        p.start()
-        processes.append(p)
-
-    active_workers = num_workers
+    queue = multiprocessing.Queue()  # Message queue for reporting progress and results
+    active_workers = 0
     total_metrics = defaultdict(int)
     wins = 0
+    status_func = lambda _: f"({active_workers}/{num_workers} workers active)"
 
-    while active_workers > 0:
-        msg_type, worker_id, arg1, *rest = queue.get()
-        if msg_type == "progress":
-            progress_bars[worker_id].update(arg1)
-        elif msg_type == "done":
-            active_workers -= 1
-            worker_wins = arg1
-            worker_metrics = rest[0]
-            wins += worker_wins
-            for metric, count in worker_metrics.items():
-                total_metrics[metric] += count
+    with click.progressbar(length=iterations, label="Solving games...", item_show_func=status_func, 
+                           show_pos=True, show_percent=False) as bar:
+        start = perf_counter()
 
-    for p in processes:
-        p.join()
+        worker_processes = []
+        for index in range(num_workers):
+            process = multiprocessing.Process(
+                target=worker_func,
+                args=(worker_iterations[index], difficulty, mines_lines, queue)
+            )
+            process.start()
+            worker_processes.append(process)
+            active_workers += 1
 
-    end = perf_counter()
+        while active_workers > 0:
+            msg_type, *args = queue.get()
+            if msg_type == "progress":
+                bar.update(1)
+            elif msg_type == "done":
+                active_workers -= 1
+                worker_wins = args[0]
+                worker_metrics = args[1]
+                wins += worker_wins
+                for metric, count in worker_metrics.items():
+                    total_metrics[metric] += count
+                bar.update(1)
+            else:
+                raise RuntimeError(f"Unexpected message: {msg_type}({args})")
 
-    for bar in progress_bars:
-        bar.__exit__(None, None, None)
+        end = perf_counter()
+        for process in worker_processes:
+            process.join()
 
     click.echo(f"Completed in {end - start:.1f} seconds. Win rate: {wins / iterations * 100:.1f}%")
     click.echo("Average metrics: " + ", ".join(
