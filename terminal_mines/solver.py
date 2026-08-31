@@ -75,26 +75,34 @@ def pick_move(minefield):
     for x_a, y_a, cell_a, unknown_neighbors_a in number_cells_with_unknown_neighbors:
         for x_b, y_b, cell_b, unknown_neighbors_b in number_cells_with_unknown_neighbors:
             unknown_a_not_b = unknown_neighbors_a - unknown_neighbors_b
-            if unknown_a_not_b:
+            unknown_both = unknown_neighbors_a & unknown_neighbors_b
+            if unknown_a_not_b and unknown_both:
                 # The preceding code has selected cells A and B such that:
                 #  - Both are revealed numbers with unknown neighbors.
                 #  - At least one cell is an unknown neighbor of A but not B.
+                #  - A and B have at least one unknown neighbor in common
 
                 remaining_mines_a = count_neighboring_mines(cell_a) - count_flagged_neighbors(minefield, x_a, y_a)
                 remaining_mines_b = count_neighboring_mines(cell_b) - count_flagged_neighbors(minefield, x_b, y_b)
                 debug_details = f"cell A ({x_a}, {y_a}) has {remaining_mines_a} remaining mines; " \
                                 f"cell B ({x_b}, {y_b}) has {remaining_mines_b} remaining mines"
 
+                if remaining_mines_a > remaining_mines_b:
+                    # A has more mines in its unknown neighbors than B
+                    max_shared_mines = min(remaining_mines_b, len(unknown_both))
+                    if remaining_mines_a - max_shared_mines == len(unknown_a_not_b):
+                        # The only way for there to be room for all of A's remaining mines is if every unknown cell  
+                        # neighboring A but not B is a mine
+                        return Move(minefield.flag_cell, *unknown_a_not_b.pop(), metrics=["two_cell_flag"], 
+                                    debug="Two cell overlap flag; " + debug_details)
+
                 if unknown_neighbors_a > unknown_neighbors_b:
                     # B's unknown neighbors are a strict subset of A's
-                    if remaining_mines_a - remaining_mines_b == len(unknown_a_not_b):
-                        # All unknown neighbors of A that are not neighbors of B must be mines
-                        return Move(minefield.flag_cell, *unknown_a_not_b.pop(), metrics=["two_cell_subset"], 
-                                    debug="Two cell subset flag; " + debug_details)
                     if remaining_mines_a == remaining_mines_b:
-                        # All unknown neighbors of A that are not neighbors of B must be safe
-                        return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), metrics=["two_cell_subset"], 
+                        # All of A's remaining mines also neighbor B so every unknown cell neighboring A but not B is safe
+                        return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), metrics=["two_cell_reveal"], 
                                     debug="Two cell subset reveal; " + debug_details)
+
 
     # Look for a low risk guess
     num_flags = minefield.count_cells_with_state(CellState.FLAGGED)
