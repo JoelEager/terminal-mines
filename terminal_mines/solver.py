@@ -93,13 +93,12 @@ def pick_move(minefield):
                     return Move(minefield.flag_cell, *unknown_a_not_b.pop(), metrics=["two_cell_flag"], 
                                 debug="Two cell overlap flag; " + debug_details)
 
-                if unknown_neighbors_a > unknown_neighbors_b:
-                    # B's unknown neighbors are a strict subset of A's
-                    if remaining_mines_a == remaining_mines_b:
-                        # All of A's remaining mines also neighbor B so every unknown cell neighboring A but not B is safe
-                        return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), metrics=["two_cell_reveal"], 
-                                    debug="Two cell subset reveal; " + debug_details)
-
+                if remaining_mines_a == remaining_mines_b and unknown_neighbors_a > unknown_neighbors_b:
+                    # A and B have the same number of remaining mines and B's unknown neighbors are a strict subset of 
+                    # A's. Since all of B's remaining mines must also neighbor A, every unknown cell neighboring A but 
+                    # not B is safe.
+                    return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), metrics=["two_cell_reveal"], 
+                                debug="Two cell subset reveal; " + debug_details)
 
     # Look for a low risk guess
     num_flags = minefield.count_cells_with_state(CellState.FLAGGED)
