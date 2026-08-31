@@ -1,5 +1,8 @@
 """
-A simple minesweeper board solver. Includes a gameplay animation loop to display moves as they are made.
+A simple minesweeper board solver. It selects known correct moves by deductive analysis rather than pre-determined 
+patterns. For guesses it uses basic probabilistic calculation. As a result, the win rate is a bit lower than truly 
+optimal play, but hopefully the implementation is more understandable. Includes a gameplay animation loop to display 
+moves as they are made.
 """
 
 from collections import defaultdict
@@ -71,24 +74,27 @@ def pick_move(minefield):
     # Perform two cell analysis
     for x_a, y_a, cell_a, unknown_neighbors_a in number_cells_with_unknown_neighbors:
         for x_b, y_b, cell_b, unknown_neighbors_b in number_cells_with_unknown_neighbors:
-            if unknown_neighbors_a > unknown_neighbors_b:
-                unknown_a_not_b = unknown_neighbors_a - unknown_neighbors_b
-                if unknown_a_not_b:
-                    # The preceding code has selected cells A and B such that:
-                    #  - Both are revealed numbers with unknown neighbors.
-                    #  - B's unknown neighbors are a strict subset of A's.
-                    #  - At least one cell is an unknown neighbor of A but not B.
+            unknown_a_not_b = unknown_neighbors_a - unknown_neighbors_b
+            if unknown_a_not_b:
+                # The preceding code has selected cells A and B such that:
+                #  - Both are revealed numbers with unknown neighbors.
+                #  - At least one cell is an unknown neighbor of A but not B.
 
-                    remaining_mines_a = count_neighboring_mines(cell_a) - count_flagged_neighbors(minefield, x_a, y_a)
-                    remaining_mines_b = count_neighboring_mines(cell_b) - count_flagged_neighbors(minefield, x_b, y_b)
-                    debug_details = f"cell A ({x_a}, {y_a}) has {remaining_mines_a} remaining mines; cell B ({x_b}, {y_b}) has {remaining_mines_b} remaining mines"
+                remaining_mines_a = count_neighboring_mines(cell_a) - count_flagged_neighbors(minefield, x_a, y_a)
+                remaining_mines_b = count_neighboring_mines(cell_b) - count_flagged_neighbors(minefield, x_b, y_b)
+                debug_details = f"cell A ({x_a}, {y_a}) has {remaining_mines_a} remaining mines; " \
+                                f"cell B ({x_b}, {y_b}) has {remaining_mines_b} remaining mines"
 
+                if unknown_neighbors_a > unknown_neighbors_b:
+                    # B's unknown neighbors are a strict subset of A's
                     if remaining_mines_a - remaining_mines_b == len(unknown_a_not_b):
                         # All unknown neighbors of A that are not neighbors of B must be mines
-                        return Move(minefield.flag_cell, *unknown_a_not_b.pop(), metrics=["two_cell_moves"], debug="Two cell flag; " + debug_details)
+                        return Move(minefield.flag_cell, *unknown_a_not_b.pop(), metrics=["two_cell_subset"], 
+                                    debug="Two cell subset flag; " + debug_details)
                     if remaining_mines_a == remaining_mines_b:
                         # All unknown neighbors of A that are not neighbors of B must be safe
-                        return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), metrics=["two_cell_moves"], debug="Two cell reveal; " + debug_details)
+                        return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), metrics=["two_cell_subset"], 
+                                    debug="Two cell subset reveal; " + debug_details)
 
     # Look for a low risk guess
     num_flags = minefield.count_cells_with_state(CellState.FLAGGED)
@@ -124,7 +130,8 @@ def pick_move(minefield):
                     metrics=["all_guesses"], debug=f"Greenfield guess ({base_risk_debug})")
 
     shuffle(all_unknown)
-    return Move(minefield.reveal_cell, all_unknown[0][0], all_unknown[0][1], metrics=["all_guesses"], debug=f"Fallback guess ({base_risk_debug})")
+    return Move(minefield.reveal_cell, all_unknown[0][0], all_unknown[0][1], metrics=["all_guesses"], 
+                debug=f"Fallback guess ({base_risk_debug})")
 
 
 def solve_game(minefield):

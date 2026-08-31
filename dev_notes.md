@@ -1,14 +1,14 @@
 # Development Notes
 ## AI Solver
 Win rates:
-| Difficulty | v2.0 | v1.5 |
-| --- | --- | --- |
-| balanced | 87% | 78% |
-| challenging | 73% | 55% |
-| max | 52% | 19% |
-| beginner | 86% | 77% |
-| intermediate | 69% | 42% |
-| expert | 18% | 1% |
+| Difficulty | Optimal play | v2.0 | v1.5 |
+| --- | --- | --- | --- |
+| balanced | - | 87% | 78% |
+| challenging | - | 73% | 55% |
+| max | - | 52% | 19% |
+| beginner | ~94% | 86% | 77% |
+| intermediate | ~80% | 69% | 42% |
+| expert | ~46% | 18% | 1% |
 
 (Measured at 3,000 iterations for precision of +/- ~1%.) Additionally, per-move processing time for v2.0 is less than half of what it was for v1.5.
 
