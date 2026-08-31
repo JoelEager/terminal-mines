@@ -1,0 +1,2 @@
+recursive-exclude tests *
+exclude solver_harness.py
