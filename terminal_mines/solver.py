@@ -87,14 +87,11 @@ def pick_move(minefield):
                 debug_details = f"cell A ({x_a}, {y_a}) has {remaining_mines_a} remaining mines; " \
                                 f"cell B ({x_b}, {y_b}) has {remaining_mines_b} remaining mines"
 
-                if remaining_mines_a > remaining_mines_b:
-                    # A has more mines in its unknown neighbors than B
-                    max_shared_mines = min(remaining_mines_b, len(unknown_both))
-                    if remaining_mines_a - max_shared_mines == len(unknown_a_not_b):
-                        # The only way for there to be room for all of A's remaining mines is if every unknown cell  
-                        # neighboring A but not B is a mine
-                        return Move(minefield.flag_cell, *unknown_a_not_b.pop(), metrics=["two_cell_flag"], 
-                                    debug="Two cell overlap flag; " + debug_details)
+                if remaining_mines_a - remaining_mines_b == len(unknown_a_not_b):
+                    # The only way for there to be room for all of A's remaining mines is if every unknown cell
+                    # neighboring A but not B is a mine
+                    return Move(minefield.flag_cell, *unknown_a_not_b.pop(), metrics=["two_cell_flag"], 
+                                debug="Two cell overlap flag; " + debug_details)
 
                 if unknown_neighbors_a > unknown_neighbors_b:
                     # B's unknown neighbors are a strict subset of A's
