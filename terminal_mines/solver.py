@@ -7,7 +7,7 @@ moves as they are made.
 
 from collections import defaultdict
 from os import getenv
-from random import shuffle, choice
+from random import choice
 from time import sleep
 
 from click import echo
@@ -28,11 +28,11 @@ class Move:
     """
     Models a move for the AI. Includes optional fields for reporting metrics and debug messages about the selected move.
     """
-    def __init__(self, func, x, y, metrics=[], debug=None):
+    def __init__(self, func, x, y, metric=None, debug=None):
         self.func = func
         self.x = x
         self.y = y
-        self.metrics = metrics
+        self.metric = metric
         self.debug = debug
 
 
@@ -58,9 +58,9 @@ def pick_move(minefield):
     neither of those work then it resorts to guessing.
     """
     # Pick a corner for the first move
+    corners = [(0, 0), (0, minefield.height - 1), (minefield.width - 1, 0), (minefield.width - 1, minefield.height - 1)]
     if minefield.first_move:
-        x, y = choice([(0, 0), (0, minefield.height - 1), (minefield.width - 1, 0), (minefield.width - 1, minefield.height - 1)])
-        return Move(minefield.reveal_cell, x, y)
+        return Move(minefield.reveal_cell, *choice(corners))
 
     # Pre-process the board to improve performance on cells that are analyzed multiple times
     number_cells_with_unknown_neighbors = []
@@ -104,16 +104,16 @@ def pick_move(minefield):
                 if solver_cell_a.num_remaining_mines - solver_cell_b.num_remaining_mines == len(unknown_a_not_b):
                     # The only way for there to be room for all of A's remaining mines is if every unknown cell
                     # neighboring A but not B is a mine
-                    return Move(minefield.flag_cell, *unknown_a_not_b.pop(), metrics=["two_cell_flag"], 
-                                debug=f"Two cell flag A{solver_cell_a} B{solver_cell_b}")
+                    return Move(minefield.flag_cell, *unknown_a_not_b.pop(), metric="two_cell_flag", 
+                                debug=f"A{solver_cell_a} B{solver_cell_b}")
 
                 if solver_cell_a.num_remaining_mines == solver_cell_b.num_remaining_mines and \
                     solver_cell_a.unknown_neighbors > solver_cell_b.unknown_neighbors:
                     # A and B have the same number of remaining mines and B's unknown neighbors are a strict subset of 
                     # A's. Since all of B's remaining mines must also neighbor A, every unknown cell neighboring A but 
                     # not B is safe.
-                    return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), metrics=["two_cell_reveal"], 
-                                debug=f"Two cell reveal A{solver_cell_a} B{solver_cell_b}")
+                    return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), metric="two_cell_reveal", 
+                                debug=f"A{solver_cell_a} B{solver_cell_b}")
 
     # Look for a low risk guess
     num_flags = minefield.count_cells_with_state(CellState.FLAGGED)
@@ -135,21 +135,21 @@ def pick_move(minefield):
                     break
 
     if best_guess:
-        return Move(minefield.reveal_cell, best_guess[0], best_guess[1], 
-                    metrics=["low_risk_guesses", "all_guesses"], debug=f"Low risk guess of {risk} vs {base_risk_debug}")
+        return Move(minefield.reveal_cell, *best_guess, metric="low_risk_guess", debug=f"{risk} vs {base_risk_debug}")
+
+    # Pick a corner to guess (which results in a better win probability)
+    unknown_corners = [(x, y) for x, y in corners if minefield.get_cell(x, y).state == CellState.UNKNOWN]
+    if unknown_corners:
+        return Move(minefield.reveal_cell, *choice(unknown_corners), metric="corner_guess", debug=base_risk_debug)
 
     # Take a guess by revealing a random cell; preferably one not neighboring a revealed number
     all_unknown = [(x, y) for x, y, cell in minefield.cords_and_cells if cell.state == CellState.UNKNOWN]
-    unknown_without_number_neighbors = [(x, y) for x, y in all_unknown if count_neighboring_numbers(minefield, x, y) == 0]
+    unknown_no_number_neighbors = [(x, y) for x, y in all_unknown if count_neighboring_numbers(minefield, x, y) == 0]
 
-    if unknown_without_number_neighbors:
-        shuffle(unknown_without_number_neighbors)
-        return Move(minefield.reveal_cell, unknown_without_number_neighbors[0][0], unknown_without_number_neighbors[0][1],
-                    metrics=["all_guesses"], debug=f"Greenfield guess ({base_risk_debug})")
+    if unknown_no_number_neighbors:
+        return Move(minefield.reveal_cell, *choice(unknown_no_number_neighbors), metric="greenfield_guess", debug=base_risk_debug)
 
-    shuffle(all_unknown)
-    return Move(minefield.reveal_cell, all_unknown[0][0], all_unknown[0][1], metrics=["all_guesses"], 
-                debug=f"Fallback guess ({base_risk_debug})")
+    return Move(minefield.reveal_cell, *choice(all_unknown), metric="fallback_guess", debug=base_risk_debug)
 
 
 def solve_game(minefield):
@@ -167,10 +167,12 @@ def solve_game(minefield):
             move = pick_move(minefield)
             move.func(move.x, move.y)
 
-            # Update the AI statistics
+            # Update the AI metrics
             metrics["moves"] += 1
-            for metric in move.metrics:
-                metrics[metric] += 1
+            if move.metric:
+                metrics[move.metric] += 1
+                if "guess" in move.metric:
+                    metrics["all_guesses"] += 1
 
             # Update the selected cell to indicate the move the AI just made
             minefield.x = move.x
@@ -179,8 +181,8 @@ def solve_game(minefield):
             # Render the updated game state
             render(minefield)
 
-            if AI_DEBUG_MODE and move.debug:
-                echo(f" Move({move.x}, {move.y}): {move.debug}")
+            if AI_DEBUG_MODE and move.metric:
+                echo(f" Move({move.x}, {move.y}, {move.metric}): {move.debug}")
                 if AI_DEBUG_MODE == "step":
                     input(" Press Enter to continue...")
 
