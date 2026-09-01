@@ -1,4 +1,8 @@
 # Development Notes
+Run tests: `python -m unittest discover tests`
+
+Check package description extraction: `python setup.py --long-description`
+
 ## AI Solver
 Win rates:
 | Difficulty | Optimal play | v2.1 | v2.0 | v1.5 |

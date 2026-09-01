@@ -20,9 +20,7 @@ from .renderer import terminal_renderer
 # "step" it will also pause after each debug message.
 AI_DEBUG_MODE = getenv("MINES_AI_DEBUG", False)
 
-# Utility lambdas for the AI:
-count_neighboring_mines = lambda cell: int(cell.state.value)
-count_flagged_neighbors = lambda minefield, x, y: len([cell for cell in minefield.neighbors(x, y) if cell.state == CellState.FLAGGED])
+# Utility lambda for the AI:
 count_neighboring_numbers = lambda minefield, x, y: len([cell for cell in minefield.neighbors(x, y) if cell.state.value.isdigit()])
 
 
@@ -36,6 +34,22 @@ class Move:
         self.y = y
         self.metrics = metrics
         self.debug = debug
+
+
+class SolverCell:
+    """
+    Stores attributes about a revealed number cell with unknown neighbors for use in the AI solver's analysis.
+    """
+    def __init__(self, x, y, cell, unknown_neighbors, num_flagged_neighbors):
+        self.x = x
+        self.y = y
+        self.unknown_neighbors = unknown_neighbors
+        self.num_neighboring_mines = int(cell.state.value)
+        self.num_flagged_neighbors = num_flagged_neighbors
+        self.num_remaining_mines = self.num_neighboring_mines - self.num_flagged_neighbors
+
+    def __repr__(self):
+        return f"({self.x}, {self.y}, n={self.num_neighboring_mines} rm={self.num_remaining_mines})"
 
 
 def pick_move(minefield):
@@ -52,53 +66,54 @@ def pick_move(minefield):
     number_cells_with_unknown_neighbors = []
     for x, y, cell in minefield.cords_and_cells:
         if cell.state.value.isdigit():
-            unknown_neighbors = {
-                (neighbor_x, neighbor_y) for neighbor_x, neighbor_y in minefield.neighboring_cords(x, y)
-                if minefield.get_cell(neighbor_x, neighbor_y).state == CellState.UNKNOWN
-            }
+            unknown_neighbors = set()
+            num_flagged_neighbors = 0
+            for neighbor_x, neighbor_y in minefield.neighboring_cords(x, y):
+                neighbor = minefield.get_cell(neighbor_x, neighbor_y)
+                if neighbor.state == CellState.UNKNOWN:
+                    unknown_neighbors.add((neighbor_x, neighbor_y))
+                elif neighbor.state == CellState.FLAGGED:
+                    num_flagged_neighbors += 1
+            
             if unknown_neighbors:
-                number_cells_with_unknown_neighbors.append((x, y, cell, unknown_neighbors))
+                number_cells_with_unknown_neighbors.append(SolverCell(x, y, cell, unknown_neighbors, num_flagged_neighbors))
 
     # If possible, place a flag via simple deduction
-    for x, y, cell, unknown_neighbors in number_cells_with_unknown_neighbors:
-        if count_neighboring_mines(cell) == len(unknown_neighbors) + count_flagged_neighbors(minefield, x, y):
-            for neighbor_x, neighbor_y in unknown_neighbors:
-                    return Move(minefield.flag_cell, neighbor_x, neighbor_y)
+    for solver_cell in number_cells_with_unknown_neighbors:
+        if solver_cell.num_remaining_mines == len(solver_cell.unknown_neighbors):
+            # The only way for the remaining mines to fit is if every unknown neighbor is a mine
+            return Move(minefield.flag_cell, *solver_cell.unknown_neighbors.pop())
 
     # If possible, reveal a cell via simple deduction
-    for x, y, cell, unknown_neighbors in number_cells_with_unknown_neighbors:
-        if count_neighboring_mines(cell) == count_flagged_neighbors(minefield, x, y):
-            for neighbor_x, neighbor_y in unknown_neighbors:
-                return Move(minefield.reveal_cell, neighbor_x, neighbor_y)
+    for solver_cell in number_cells_with_unknown_neighbors:
+        if solver_cell.num_remaining_mines == 0:
+            # All mines are flagged, so every unknown neighbor is safe
+            return Move(minefield.reveal_cell, *solver_cell.unknown_neighbors.pop())
 
     # Perform two cell analysis
-    for x_a, y_a, cell_a, unknown_neighbors_a in number_cells_with_unknown_neighbors:
-        for x_b, y_b, cell_b, unknown_neighbors_b in number_cells_with_unknown_neighbors:
-            unknown_a_not_b = unknown_neighbors_a - unknown_neighbors_b
-            unknown_both = unknown_neighbors_a & unknown_neighbors_b
+    for solver_cell_a in number_cells_with_unknown_neighbors:
+        for solver_cell_b in number_cells_with_unknown_neighbors:
+            unknown_a_not_b = solver_cell_a.unknown_neighbors - solver_cell_b.unknown_neighbors
+            unknown_both = solver_cell_a.unknown_neighbors & solver_cell_b.unknown_neighbors
             if unknown_a_not_b and unknown_both:
                 # The preceding code has selected cells A and B such that:
                 #  - Both are revealed numbers with unknown neighbors.
                 #  - At least one cell is an unknown neighbor of A but not B.
                 #  - A and B have at least one unknown neighbor in common
 
-                remaining_mines_a = count_neighboring_mines(cell_a) - count_flagged_neighbors(minefield, x_a, y_a)
-                remaining_mines_b = count_neighboring_mines(cell_b) - count_flagged_neighbors(minefield, x_b, y_b)
-                debug_details = f"cell A ({x_a}, {y_a}) has {remaining_mines_a} remaining mines; " \
-                                f"cell B ({x_b}, {y_b}) has {remaining_mines_b} remaining mines"
-
-                if remaining_mines_a - remaining_mines_b == len(unknown_a_not_b):
+                if solver_cell_a.num_remaining_mines - solver_cell_b.num_remaining_mines == len(unknown_a_not_b):
                     # The only way for there to be room for all of A's remaining mines is if every unknown cell
                     # neighboring A but not B is a mine
                     return Move(minefield.flag_cell, *unknown_a_not_b.pop(), metrics=["two_cell_flag"], 
-                                debug="Two cell overlap flag; " + debug_details)
+                                debug=f"Two cell flag A{solver_cell_a} B{solver_cell_b}")
 
-                if remaining_mines_a == remaining_mines_b and unknown_neighbors_a > unknown_neighbors_b:
+                if solver_cell_a.num_remaining_mines == solver_cell_b.num_remaining_mines and \
+                    solver_cell_a.unknown_neighbors > solver_cell_b.unknown_neighbors:
                     # A and B have the same number of remaining mines and B's unknown neighbors are a strict subset of 
                     # A's. Since all of B's remaining mines must also neighbor A, every unknown cell neighboring A but 
                     # not B is safe.
                     return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), metrics=["two_cell_reveal"], 
-                                debug="Two cell subset reveal; " + debug_details)
+                                debug=f"Two cell reveal A{solver_cell_a} B{solver_cell_b}")
 
     # Look for a low risk guess
     num_flags = minefield.count_cells_with_state(CellState.FLAGGED)
@@ -108,12 +123,11 @@ def pick_move(minefield):
     risk = base_risk  # Start with the worst case risk
     best_guess = None
 
-    for x, y, cell, unknown_neighbors in number_cells_with_unknown_neighbors:
-        remaining_mines = count_neighboring_mines(cell) - count_flagged_neighbors(minefield, x, y)
-        neighbor_risk = remaining_mines / len(unknown_neighbors)
+    for solver_cell in number_cells_with_unknown_neighbors:
+        neighbor_risk = solver_cell.num_remaining_mines / len(solver_cell.unknown_neighbors)
         if neighbor_risk < risk:
             # Neighbors of this cell have a lower risk than what has been observed so far
-            for candidate_x, candidate_y in unknown_neighbors:
+            for candidate_x, candidate_y in solver_cell.unknown_neighbors:
                 # Make sure the candidate guess hasn't had its risk influenced by another neighboring number
                 if count_neighboring_numbers(minefield, candidate_x, candidate_y) == 1:
                     best_guess = (candidate_x, candidate_y)
