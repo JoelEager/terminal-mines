@@ -7,14 +7,14 @@ Check package description extraction: `python setup.py --long-description`
 Win rates:
 | Difficulty | Optimal play | v2.1 | v2.0 | v1.5 |
 | --- | --- | --- | --- | --- |
-| balanced | - | 90% | 87% | 78% |
-| challenging | - | 80% | 73% | 55% |
-| max | - | 60% | 52% | 19% |
-| beginner | ~94% | 91% | 86% | 77% |
-| intermediate | ~80% | 74% | 69% | 42% |
-| expert | ~46% | 27% | 18% | 1% |
+| balanced | 90% | 90% | 87% | 78% |
+| challenging | 80% | 80% | 73% | 55% |
+| max | 65% | 60% | 52% | 19% |
+| beginner | 92% | 91% | 86% | 77% |
+| intermediate | 78% | 74% | 69% | 42% |
+| expert | 40% | 27% | 18% | 1% |
 
-(Measured over at least 3,000 iterations targeting a precision of +/- ~1%.) Additionally, per-move processing time for v2.0 and v2.1 is less than half of what it was for v1.5.
+(Measured over at least 3,000 iterations targeting a precision of +/- ~1%. Optimal play win rates from minesweeper.online.) Additionally, per-move processing time for v2.0 and v2.1 is less than half of what it was for v1.5.
 
 ### Tooling Usage
 Run the solver in debug mode:

@@ -137,7 +137,7 @@ def pick_move(minefield):
     if best_guess:
         return Move(minefield.reveal_cell, *best_guess, metric="low_risk_guess", debug=f"{risk} vs {base_risk_debug}")
 
-    # Pick a corner to guess (which results in a better win probability)
+    # Pick a corner to guess (which have the best odds of triggering a multi-cell reveal)
     unknown_corners = [(x, y) for x, y in corners if minefield.get_cell(x, y).state == CellState.UNKNOWN]
     if unknown_corners:
         return Move(minefield.reveal_cell, *choice(unknown_corners), metric="corner_guess", debug=base_risk_debug)
