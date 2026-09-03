@@ -179,8 +179,17 @@ def pick_move(minefield):
     if unknown_corners:
         return Move(minefield.reveal_cell, *choice(unknown_corners), label="corner_guess", debug=base_risk)
 
-    # Take a guess by revealing a random cell; preferably one not neighboring a revealed number
+    # Take a guess by revealing a random cell; preferably one on the edge of the minefield and not neighboring a revealed number
+    all_unknown = [(x, y) for x, y, cell in minefield.cords_and_cells if cell.state == CellState.UNKNOWN]
     unknown_no_number_neighbors = [(x, y) for x, y in all_unknown if count_neighboring_numbers(minefield, x, y) == 0]
+    edge_unknown_no_number_neighbors = [
+        (x, y) for x, y in unknown_no_number_neighbors 
+        if x == 0 or x == minefield.width - 1 or y == 0 or y == minefield.height - 1
+    ]
+
+    if edge_unknown_no_number_neighbors:
+        return Move(minefield.reveal_cell, *choice(edge_unknown_no_number_neighbors), label="edge_guess", debug=base_risk_debug)
+
     if unknown_no_number_neighbors:
         return Move(minefield.reveal_cell, *choice(unknown_no_number_neighbors), label="greenfield_guess", debug=base_risk)
 
