@@ -14,13 +14,21 @@ Win rates:
 | intermediate | 78% | 74% | 69% | 42% |
 | expert | 40% | 27% | 18% | 1% |
 
-(Measured over at least 3,000 iterations targeting a precision of +/- ~1%. Optimal play win rates from minesweeper.online.) Additionally, per-move processing time for v2.0 and v2.1 is less than half of what it was for v1.5.
+(Measured over at least 3,000 iterations targeting a precision of +/- ~1%. Optimal play win rates from minesweeper.online.)
+
+Strategies implemented:
+- **WIP v2.1**: Simple deduction, two cell overlap flag, two cell subset reveal, low risk guess, corner guess, greenfield guess, corner start
+- **v2.0**: Simple deduction, two cell subset (flag and reveal), low risk guess, greenfield guess, corner start
+- **v1.5**: Simple deduction, corner guess, corner start
+
+Additionally, per-move processing time for v2.0 and v2.1 is less than half of what it was for v1.5.
 
 ### Tooling Usage
 Run the solver in debug mode:
 ```sh
-MINES_AI_DEBUG=step mines challenging --solve
 MINES_AI_DEBUG=y mines expert --solve
+MINES_AI_DEBUG=step mines challenging --solve
+MINES_AI_DEBUG=two_cell_flag mines expert --solve
 ```
 
 Run the solver harness:
