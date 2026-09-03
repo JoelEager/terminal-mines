@@ -133,6 +133,27 @@ def pick_move(minefield):
                                 return Move(minefield.reveal_cell, *unknown_b_not_a.pop(), label="three_cell_reveal_b", 
                                             debug=f"A{solver_cell_a} B{solver_cell_b} C{solver_cell_c}")
 
+                for solver_cell_c in number_cells_with_unknown_neighbors:
+                    unknown_a_only = unknown_a_not_b - solver_cell_c.unknown_neighbors
+                    if unknown_a_only and unknown_a_only != unknown_a_not_b:
+                        # C's unknown neighbors overlap with those of A that don't neighbor B. Also, at least one 
+                        # unknown neighbor of A doesn't neighbor B or C.
+                        a_only_num_remaining_mines = solver_cell_a.num_remaining_mines - solver_cell_b.num_remaining_mines \
+                            - solver_cell_c.num_remaining_mines
+                        if a_only_num_remaining_mines == len(unknown_a_only):
+                            # The only way for there to be room for all of A's remaining mines is if every unknown cell
+                            # neighboring A but not B or C is a mine
+                            return Move(minefield.flag_cell, *unknown_a_only.pop(), label="three_cell_flag", 
+                                        debug=f"A{solver_cell_a} B{solver_cell_b} C{solver_cell_c}")
+                        if a_only_num_remaining_mines == 0 and solver_cell_a.unknown_neighbors > solver_cell_b.unknown_neighbors and \
+                            solver_cell_a.unknown_neighbors > solver_cell_c.unknown_neighbors and \
+                            not solver_cell_b.unknown_neighbors & solver_cell_c.unknown_neighbors:
+                            # The unknown neighbors of B and C are strict subsets of A's but do not intersect with each 
+                            # other. A has no remaining mines that don't neighbor B or C. As a result, every unknown 
+                            # cell neighboring A but not B or C is safe.
+                            return Move(minefield.reveal_cell, *unknown_a_only.pop(), label="three_cell_reveal_a", 
+                                        debug=f"A{solver_cell_a} B{solver_cell_b} C{solver_cell_c}")
+
     # Look for a low risk guess
     all_unknown = [(x, y) for x, y, cell in minefield.cords_and_cells if cell.state == CellState.UNKNOWN]
     base_risk = (minefield.num_mines - minefield.count_cells_with_state(CellState.FLAGGED)) / len(all_unknown)
