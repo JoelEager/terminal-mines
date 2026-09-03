@@ -9,7 +9,7 @@ with open("README.md") as file:
 
 setup(
     name="terminal-mines",
-    version="2.0",
+    version="2.1",
     python_requires="~=3.6",
     license="MIT",
     author="Joel Eager",

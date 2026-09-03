@@ -178,7 +178,7 @@ class Minefield:
 
 def random_minefield(num_mines, width, height):
     """
-    :return: A new Minefield instance with a random set of mines.
+    Generates a new Minefield instance with a random set of mines.
     """
     mines = set()
     while len(mines) != num_mines:
