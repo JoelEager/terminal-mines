@@ -1,5 +1,8 @@
 """
-A simple Minesweeper board solver
+A not-simple Minesweeper board solver
+
+This branch includes all the strategies that I've tested and left out of master due to the complexity not being 
+worth the small increase in win rate.
 
 Selects moves by deductive analysis rather than pre-determined patterns with basic probabilistic calculation for 
 guesses. The win rate is a bit lower than optimal play, but this produces a more readable algorithm. Includes a 
@@ -117,6 +120,7 @@ def pick_move(minefield):
                     return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), label="two_cell_reveal", 
                                 debug=f"A{solver_cell_a} B{solver_cell_b}")
 
+                # Three cell analysis
                 unknown_b_not_a = solver_cell_b.unknown_neighbors - solver_cell_a.unknown_neighbors
                 if unknown_b_not_a:
                     for solver_cell_c in number_cells_with_unknown_neighbors:
@@ -153,6 +157,29 @@ def pick_move(minefield):
                             # cell neighboring A but not B or C is safe.
                             return Move(minefield.reveal_cell, *unknown_a_only.pop(), label="three_cell_reveal_a", 
                                         debug=f"A{solver_cell_a} B{solver_cell_b} C{solver_cell_c}")
+    # Mine counting
+    all_unknown = [(x, y) for x, y, cell in minefield.cords_and_cells if cell.state == CellState.UNKNOWN]
+    num_mines_remaining = minefield.num_mines - minefield.count_cells_with_state(CellState.FLAGGED)
+
+    def mine_count(number_cells, remaining_unknown, num_mines):
+        if num_mines == 0:
+            return Move(minefield.reveal_cell, *remaining_unknown.pop(), label="mine_count", debug=[])
+        if num_mines < 0:
+            return None
+        while number_cells:
+            solver_cell = number_cells.pop()
+            if solver_cell.unknown_neighbors < remaining_unknown:
+                move = mine_count(set(number_cells), remaining_unknown - solver_cell.unknown_neighbors, 
+                                  num_mines - solver_cell.num_remaining_mines)
+                if move:
+                    move.debug.insert(0, solver_cell)
+                    return move
+
+    if len(number_cells_with_unknown_neighbors) <= 40 and \
+        sum(solver_cell.num_remaining_mines for solver_cell in number_cells_with_unknown_neighbors) >= num_mines_remaining:
+        move = mine_count(set(number_cells_with_unknown_neighbors), set(all_unknown), num_mines_remaining)
+        if move:
+            return move
 
     # Look for a low risk guess
     all_unknown = [(x, y) for x, y, cell in minefield.cords_and_cells if cell.state == CellState.UNKNOWN]
@@ -180,7 +207,6 @@ def pick_move(minefield):
         return Move(minefield.reveal_cell, *choice(unknown_corners), label="corner_guess", debug=base_risk)
 
     # Take a guess by revealing a random cell; preferably one on the edge of the minefield and not neighboring a revealed number
-    all_unknown = [(x, y) for x, y, cell in minefield.cords_and_cells if cell.state == CellState.UNKNOWN]
     unknown_no_number_neighbors = [(x, y) for x, y in all_unknown if count_neighboring_numbers(minefield, x, y) == 0]
     edge_unknown_no_number_neighbors = [
         (x, y) for x, y in unknown_no_number_neighbors 
@@ -188,7 +214,7 @@ def pick_move(minefield):
     ]
 
     if edge_unknown_no_number_neighbors:
-        return Move(minefield.reveal_cell, *choice(edge_unknown_no_number_neighbors), label="edge_guess", debug=base_risk_debug)
+        return Move(minefield.reveal_cell, *choice(edge_unknown_no_number_neighbors), label="edge_guess", debug=base_risk)
 
     if unknown_no_number_neighbors:
         return Move(minefield.reveal_cell, *choice(unknown_no_number_neighbors), label="greenfield_guess", debug=base_risk)
