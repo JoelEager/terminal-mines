@@ -118,40 +118,36 @@ def pick_move(minefield):
                                 debug=f"A{solver_cell_a} B{solver_cell_b}")
 
     # Look for a low risk guess
-    num_flags = minefield.count_cells_with_state(CellState.FLAGGED)
-    num_unknown = minefield.count_cells_with_state(CellState.UNKNOWN)
-    base_risk = (minefield.num_mines - num_flags) / num_unknown
-    base_risk_debug = f"base risk of {base_risk}"
-    risk = base_risk  # Start with the worst case risk
+    all_unknown = [(x, y) for x, y, cell in minefield.cords_and_cells if cell.state == CellState.UNKNOWN]
+    base_risk = (minefield.num_mines - minefield.count_cells_with_state(CellState.FLAGGED)) / len(all_unknown)
+    best_risk = base_risk  # Start with the worst case risk
     best_guess = None
 
     for solver_cell in number_cells_with_unknown_neighbors:
         neighbor_risk = solver_cell.num_remaining_mines / len(solver_cell.unknown_neighbors)
-        if neighbor_risk < risk:
+        if neighbor_risk < best_risk:
             # Neighbors of this cell have a lower risk than what has been observed so far
             for candidate_x, candidate_y in solver_cell.unknown_neighbors:
                 # Make sure the candidate guess hasn't had its risk influenced by another neighboring number
                 if count_neighboring_numbers(minefield, candidate_x, candidate_y) == 1:
                     best_guess = (candidate_x, candidate_y)
-                    risk = neighbor_risk
+                    best_risk = neighbor_risk
                     break
 
     if best_guess:
-        return Move(minefield.reveal_cell, *best_guess, label="low_risk_guess", debug=f"{risk} vs {base_risk_debug}")
+        return Move(minefield.reveal_cell, *best_guess, label="low_risk_guess", debug=f"{best_risk} vs {base_risk}")
 
     # Pick a corner to guess (which have the best odds of triggering a multi-cell reveal)
     unknown_corners = [(x, y) for x, y in corners if minefield.get_cell(x, y).state == CellState.UNKNOWN]
     if unknown_corners:
-        return Move(minefield.reveal_cell, *choice(unknown_corners), label="corner_guess", debug=base_risk_debug)
+        return Move(minefield.reveal_cell, *choice(unknown_corners), label="corner_guess", debug=base_risk)
 
     # Take a guess by revealing a random cell; preferably one not neighboring a revealed number
-    all_unknown = [(x, y) for x, y, cell in minefield.cords_and_cells if cell.state == CellState.UNKNOWN]
     unknown_no_number_neighbors = [(x, y) for x, y in all_unknown if count_neighboring_numbers(minefield, x, y) == 0]
-
     if unknown_no_number_neighbors:
-        return Move(minefield.reveal_cell, *choice(unknown_no_number_neighbors), label="greenfield_guess", debug=base_risk_debug)
+        return Move(minefield.reveal_cell, *choice(unknown_no_number_neighbors), label="greenfield_guess", debug=base_risk)
 
-    return Move(minefield.reveal_cell, *choice(all_unknown), label="fallback_guess", debug=base_risk_debug)
+    return Move(minefield.reveal_cell, *choice(all_unknown), label="fallback_guess", debug=base_risk)
 
 
 def solve_game(minefield):

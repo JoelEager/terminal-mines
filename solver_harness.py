@@ -12,9 +12,9 @@ import os
 
 import click
 
-from terminal_mines.main import DifficultyParamType, create_minefield
+from terminal_mines.main import DifficultyParamType
 from terminal_mines.solver import solve_game
-from terminal_mines.game_model import GameState
+from terminal_mines.game_model import random_minefield, GameState
 
 
 # No-op functions to efficiently replace unneeded output logic
@@ -27,7 +27,7 @@ def dummy_renderer(*args, **kwargs):
     yield dummy_func
 
 
-def worker_func(num_iterations, difficulty, mines_lines, queue):
+def worker_func(num_iterations, difficulty, queue):
     """
     This function is run in each worker subprocess to solve its portion of the total number of games. Reports progress 
     and final results via the given message queue.
@@ -36,7 +36,7 @@ def worker_func(num_iterations, difficulty, mines_lines, queue):
          patch("terminal_mines.solver.sleep", dummy_func), \
          patch("terminal_mines.solver.terminal_renderer", dummy_renderer):
         for index in range(num_iterations):
-            minefield = create_minefield(None, difficulty, mines_lines)
+            minefield = random_minefield(*difficulty)
             metrics = solve_game(minefield)
             if minefield.state == GameState.WON:
                 metrics["wins"] = 1
@@ -46,19 +46,13 @@ def worker_func(num_iterations, difficulty, mines_lines, queue):
 @click.command(context_settings=dict(help_option_names=["-h", "--help"]))
 @click.pass_context
 @click.argument("difficulty", default="balanced", type=DifficultyParamType())
-@click.option("-m", "--mines", "mines_file", type=click.File(), help="Provide a file containing custom mine placements.")
 @click.option("-i", "--iterations", default=1000, type=int, help="Number of iterations to run the solver.")
-def main(ctx, difficulty, mines_file, iterations):
+def main(ctx, difficulty, iterations):
     """
-    Run the Terminal Mines AI solver repeatedly with the given game generation arguments. Reports the win rate and average metrics.
+    Run the Terminal Mines AI solver repeatedly with the given difficulty. Reports the win rate and average metrics.
     """
     if iterations < 1:
         ctx.fail("Invalid number of iterations")
-
-    mines_lines = mines_file.readlines() if mines_file else None
-
-    # Validate mines file / difficulty combination prior to spawning subprocesses
-    create_minefield(ctx, difficulty, mines_lines)
 
     num_workers = min(os.cpu_count() or 2, iterations)
     base_iterations = iterations // num_workers
@@ -76,7 +70,7 @@ def main(ctx, difficulty, mines_file, iterations):
         for index in range(num_workers):
             process = multiprocessing.Process(
                 target=worker_func,
-                args=(worker_iterations[index], difficulty, mines_lines, queue)
+                args=(worker_iterations[index], difficulty, queue)
             )
             process.start()
             worker_processes.append(process)

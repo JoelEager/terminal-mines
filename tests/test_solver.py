@@ -55,7 +55,7 @@ class TestSolverDeterministicStrategies(unittest.TestCase):
         move = pick_move(minefield)
         self.assertEqual(move.func, minefield.flag_cell)
         self.assertEqual((move.x, move.y), (2, 0))
-        self.assertEqual(move.metric, "two_cell_flag")
+        self.assertEqual(move.label, "two_cell_flag")
 
     def test_two_cell_analysis_reveal(self):
         """
@@ -73,7 +73,7 @@ class TestSolverDeterministicStrategies(unittest.TestCase):
         move = pick_move(minefield)
         self.assertEqual(move.func, minefield.reveal_cell)
         self.assertEqual((move.x, move.y), (2, 0))
-        self.assertEqual(move.metric, "two_cell_reveal")
+        self.assertEqual(move.label, "two_cell_reveal")
 
 
 if __name__ == "__main__":
