@@ -1,5 +1,5 @@
 """
-An optimal Minesweeper board solver using exact probability calculations.
+This branch implements an optimal Minesweeper board solver using exact probability calculations.
 
 Divides unknown frontier cells into independent connected components, enumerates valid mine configurations via
 constraint-pruned backtracking, combines components with interior cells using binomial coefficient math to account
@@ -87,28 +87,12 @@ def pick_move(minefield):
             if unknown_neighbors:
                 number_cells.append(SolverCell(x, y, cell, unknown_neighbors, num_flagged_neighbors))
 
-    if not all_unknown:
-        return Move(minefield.reveal_cell, 0, 0)
-
-    # Simple deduction pass first (fast path & maintains exact legacy move labels where applicable)
+    # Simple deduction pass first (fast path)
     for sc in number_cells:
         if sc.num_remaining_mines == len(sc.unknown_neighbors):
             return Move(minefield.flag_cell, *sc.unknown_neighbors.pop())
         if sc.num_remaining_mines == 0:
             return Move(minefield.reveal_cell, *sc.unknown_neighbors.pop())
-
-    # Check for two-cell deduction labels to maintain legacy test compatibility
-    for sc_a in number_cells:
-        for sc_b in number_cells:
-            if sc_a is sc_b:
-                continue
-            diff_a_b = sc_a.unknown_neighbors - sc_b.unknown_neighbors
-            common = sc_a.unknown_neighbors & sc_b.unknown_neighbors
-            if diff_a_b and common:
-                if sc_a.num_remaining_mines - sc_b.num_remaining_mines == len(diff_a_b):
-                    return Move(minefield.flag_cell, *diff_a_b.pop(), label="two_cell_flag", debug=f"A{sc_a} B{sc_b}")
-                if sc_a.num_remaining_mines == sc_b.num_remaining_mines and sc_a.unknown_neighbors > sc_b.unknown_neighbors:
-                    return Move(minefield.reveal_cell, *diff_a_b.pop(), label="two_cell_reveal", debug=f"A{sc_a} B{sc_b}")
 
     # Build frontier and interior unknown cell sets
     frontier_unknowns = set()
@@ -297,17 +281,17 @@ def pick_move(minefield):
         for c in all_unknown:
             cell_probabilities[c] = base_risk
 
-    # Safe cells (Prob == 0)
-    safe_cells = [c for c, p in cell_probabilities.items() if p <= 1e-12]
-    if safe_cells:
-        selected = safe_cells[0]
-        return Move(minefield.reveal_cell, *selected)
-
     # Flagged mine cells (Prob == 1)
     mine_cells = [c for c, p in cell_probabilities.items() if p >= 1.0 - 1e-12]
     if mine_cells:
         selected = mine_cells[0]
-        return Move(minefield.flag_cell, *selected)
+        return Move(minefield.flag_cell, *selected, label="exact_prob_mine")
+
+    # Safe cells (Prob == 0)
+    safe_cells = [c for c, p in cell_probabilities.items() if p <= 1e-12]
+    if safe_cells:
+        selected = safe_cells[0]
+        return Move(minefield.reveal_cell, *selected, label="exact_prob_safe")
 
     # Forced Guessing: find lowest risk cells
     min_prob = min(cell_probabilities.values())
@@ -334,7 +318,7 @@ def pick_move(minefield):
             max_num_neighbors = num_neighbors
             best_guess = c
 
-    return Move(minefield.reveal_cell, *best_guess, label="low_risk_guess", debug=f"prob={min_prob:.4f}")
+    return Move(minefield.reveal_cell, *best_guess, label="reveal_guess", debug=f"prob={min_prob:.4f}")
 
 
 def solve_game(minefield):
