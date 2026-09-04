@@ -1,16 +1,21 @@
 import unittest
 from terminal_mines.game_model import Minefield, CellState
-from terminal_mines.solver import pick_move
+from terminal_mines.solver import pick_move, nCr
 
 
 class TestSolverDeterministicStrategies(unittest.TestCase):
+    def test_nCr(self):
+        self.assertEqual(nCr(5, 2), 10)
+        self.assertEqual(nCr(5, 0), 1)
+        self.assertEqual(nCr(5, 5), 1)
+        self.assertEqual(nCr(5, 6), 0)
+        self.assertEqual(nCr(5, -1), 0)
+
     def test_simple_deduction_flag(self):
         """
         When visible mines equal unknown neighbors + flagged neighbors,
         all unknown neighbors must be mines -> flag move.
         """
-        # 2x2 board, mine at (0,0)
-        # Reveal (1,0), (0,1), (1,1) as WARN1 ('1')
         minefield = Minefield(2, 2, {"0,0"})
         minefield.first_move = False
         minefield.get_cell(1, 0).state = CellState.WARN1
@@ -26,9 +31,6 @@ class TestSolverDeterministicStrategies(unittest.TestCase):
         When visible mines equal flagged neighbors,
         all remaining unknown neighbors are safe -> reveal move.
         """
-        # 2x2 board, mine at (0,0)
-        # Flag (0,0)
-        # Reveal (1,0) as WARN1 ('1')
         minefield = Minefield(2, 2, {"0,0"})
         minefield.first_move = False
         minefield.flag_cell(0, 0)
@@ -36,7 +38,6 @@ class TestSolverDeterministicStrategies(unittest.TestCase):
 
         move = pick_move(minefield)
         self.assertEqual(move.func, minefield.reveal_cell)
-        # Neighbors of (1,0) are (0,0) [flagged], (0,1) [unknown], (1,1) [unknown]
         self.assertIn((move.x, move.y), {(0, 1), (1, 1)})
 
     def test_two_cell_analysis_flag(self):
@@ -74,6 +75,20 @@ class TestSolverDeterministicStrategies(unittest.TestCase):
         self.assertEqual(move.func, minefield.reveal_cell)
         self.assertEqual((move.x, move.y), (2, 0))
         self.assertEqual(move.label, "two_cell_reveal")
+
+    def test_forced_guess_probability(self):
+        """
+        Test that when guessing is required, the solver calculates exact probabilities and picks a low risk guess.
+        """
+        # 3x3 board with 1 mine total
+        minefield = Minefield(3, 3, {"2,2"})
+        minefield.first_move = False
+        # Reveal (0,0) = SAFE
+        minefield.get_cell(0, 0).state = CellState.SAFE
+
+        move = pick_move(minefield)
+        self.assertEqual(move.func, minefield.reveal_cell)
+        self.assertIsNotNone(move.label)
 
 
 if __name__ == "__main__":

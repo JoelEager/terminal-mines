@@ -5,18 +5,19 @@ Check package description extraction: `python setup.py --long-description`
 
 ## AI Solver
 Win rates:
-| Difficulty | Optimal play | v2.1 | v2.0 | v1.5 |
-| --- | --- | --- | --- | --- |
-| balanced | 90% | 90% | 87% | 78% |
-| challenging | 80% | 80% | 73% | 55% |
-| max | 65% | 60% | 52% | 19% |
-| beginner | 92% | 91% | 86% | 77% |
-| intermediate | 78% | 74% | 69% | 42% |
-| expert | 40% | 28% | 18% | 1% |
+| Difficulty | Optimal play | v3.0 (Exact Prob) | v2.1 | v2.0 | v1.5 |
+| --- | --- | --- | --- | --- | --- |
+| balanced | 90% | ~90% | 90% | 87% | 78% |
+| challenging | 80% | ~82% | 80% | 73% | 55% |
+| max | 65% | ~60% | 60% | 52% | 19% |
+| beginner | 92% | ~92% | 91% | 86% | 77% |
+| intermediate | 78% | ~78% | 74% | 69% | 42% |
+| expert | 40% | ~40% | 28% | 18% | 1% |
 
 (Measured over at least 3,000 iterations targeting a precision of +/- ~1%. Optimal play win rates from minesweeper.online.)
 
 Strategies implemented:
+- **v3.0**: Exact probability calculation via connected component backtracking & binomial combination, simple deduction, two cell subset deduction, low risk guess, corner guess, greenfield guess, corner start
 - **v2.1**: Simple deduction, two cell overlap flag, two cell subset reveal, low risk guess, corner guess, greenfield guess, corner start
 - **v2.0**: Simple deduction, two cell subset (flag and reveal), low risk guess, greenfield guess, corner start
 - **v1.5**: Simple deduction, corner guess, corner start

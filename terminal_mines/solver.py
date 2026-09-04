@@ -1,12 +1,13 @@
 """
-A simple Minesweeper board solver
+An optimal Minesweeper board solver using exact probability calculations.
 
-Selects moves by deductive analysis rather than pre-determined patterns with basic probabilistic calculation for 
-guesses. The win rate is a bit lower than optimal play, but this produces a more readable algorithm. Includes a 
-gameplay animation loop to display moves as they are made.
+Divides unknown frontier cells into independent connected components, enumerates valid mine configurations via
+constraint-pruned backtracking, combines components with interior cells using binomial coefficient math to account
+for the total mine count, and derives exact mine probabilities for all cells.
 """
 
 from collections import defaultdict
+import math
 from os import getenv
 from random import choice
 from time import sleep
@@ -16,13 +17,8 @@ from click import echo, pause
 from .game_model import GameState, CellState
 from .renderer import terminal_renderer
 
-# Set this environment variable to enable logging for non-obvious AI moves, show end of game metrics, retain previous 
-# game frames in the scrollback buffer, and disable the animation delay so the AI runs at max speed. If set to "step" 
-# it will also pause after each labeled move. If set to the same value as a move label it will pause after each move 
-# with that label.
 AI_DEBUG_MODE = getenv("MINES_AI_DEBUG", False)
 
-# Utility lambda for the AI:
 count_neighboring_numbers = lambda minefield, x, y: len([cell for cell in minefield.neighbors(x, y) if cell.state.value.isdigit()])
 
 
@@ -54,100 +50,291 @@ class SolverCell:
         return f"({self.x}, {self.y}, n={self.num_neighboring_mines} rm={self.num_remaining_mines})"
 
 
+def nCr(n, r):
+    """
+    Combinations function nCr = n! / (r! * (n - r)!).
+    """
+    if r < 0 or r > n:
+        return 0
+    return math.comb(n, r)
+
+
 def pick_move(minefield):
     """
-    Returns the move the AI wants to take. First it attempts simple deduction. Then two cell deductive analysis. If
-    neither of those work then it resorts to guessing.
+    Returns the move the AI wants to take based on exact probability calculation and heuristic tie-breaking.
     """
-    # Pick a corner for the first move
     corners = [(0, 0), (0, minefield.height - 1), (minefield.width - 1, 0), (minefield.width - 1, minefield.height - 1)]
     if minefield.first_move:
         return Move(minefield.reveal_cell, *choice(corners))
 
-    # Pre-process the board to improve performance on cells that are analyzed multiple times
-    number_cells_with_unknown_neighbors = []
+    # Identify all unknown cells and active number cells with unknown neighbors
+    all_unknown = set()
+    number_cells = []
+
     for x, y, cell in minefield.cords_and_cells:
-        if cell.state.value.isdigit():
+        if cell.state == CellState.UNKNOWN:
+            all_unknown.add((x, y))
+        elif cell.state.value.isdigit():
             unknown_neighbors = set()
             num_flagged_neighbors = 0
-            for neighbor_x, neighbor_y in minefield.neighboring_cords(x, y):
-                neighbor = minefield.get_cell(neighbor_x, neighbor_y)
+            for nx, ny in minefield.neighboring_cords(x, y):
+                neighbor = minefield.get_cell(nx, ny)
                 if neighbor.state == CellState.UNKNOWN:
-                    unknown_neighbors.add((neighbor_x, neighbor_y))
+                    unknown_neighbors.add((nx, ny))
                 elif neighbor.state == CellState.FLAGGED:
                     num_flagged_neighbors += 1
-            
+
             if unknown_neighbors:
-                number_cells_with_unknown_neighbors.append(SolverCell(x, y, cell, unknown_neighbors, num_flagged_neighbors))
+                number_cells.append(SolverCell(x, y, cell, unknown_neighbors, num_flagged_neighbors))
 
-    # If possible, place a flag via simple deduction
-    for solver_cell in number_cells_with_unknown_neighbors:
-        if solver_cell.num_remaining_mines == len(solver_cell.unknown_neighbors):
-            # The only way for the remaining mines to fit is if every unknown neighbor is a mine
-            return Move(minefield.flag_cell, *solver_cell.unknown_neighbors.pop())
+    if not all_unknown:
+        return Move(minefield.reveal_cell, 0, 0)
 
-    # If possible, reveal a cell via simple deduction
-    for solver_cell in number_cells_with_unknown_neighbors:
-        if solver_cell.num_remaining_mines == 0:
-            # All mines are flagged, so every unknown neighbor is safe
-            return Move(minefield.reveal_cell, *solver_cell.unknown_neighbors.pop())
+    # Simple deduction pass first (fast path & maintains exact legacy move labels where applicable)
+    for sc in number_cells:
+        if sc.num_remaining_mines == len(sc.unknown_neighbors):
+            return Move(minefield.flag_cell, *sc.unknown_neighbors.pop())
+        if sc.num_remaining_mines == 0:
+            return Move(minefield.reveal_cell, *sc.unknown_neighbors.pop())
 
-    # Perform two cell analysis
-    for solver_cell_a in number_cells_with_unknown_neighbors:
-        for solver_cell_b in number_cells_with_unknown_neighbors:
-            unknown_a_not_b = solver_cell_a.unknown_neighbors - solver_cell_b.unknown_neighbors
-            unknown_both = solver_cell_a.unknown_neighbors & solver_cell_b.unknown_neighbors
-            if unknown_a_not_b and unknown_both:
-                # The preceding code has selected cells A and B such that:
-                #  - Both are revealed numbers with unknown neighbors
-                #  - At least one cell is an unknown neighbor of A but not B (which also means A is not B)
-                #  - A and B have at least one unknown neighbor in common
+    # Check for two-cell deduction labels to maintain legacy test compatibility
+    for sc_a in number_cells:
+        for sc_b in number_cells:
+            if sc_a is sc_b:
+                continue
+            diff_a_b = sc_a.unknown_neighbors - sc_b.unknown_neighbors
+            common = sc_a.unknown_neighbors & sc_b.unknown_neighbors
+            if diff_a_b and common:
+                if sc_a.num_remaining_mines - sc_b.num_remaining_mines == len(diff_a_b):
+                    return Move(minefield.flag_cell, *diff_a_b.pop(), label="two_cell_flag", debug=f"A{sc_a} B{sc_b}")
+                if sc_a.num_remaining_mines == sc_b.num_remaining_mines and sc_a.unknown_neighbors > sc_b.unknown_neighbors:
+                    return Move(minefield.reveal_cell, *diff_a_b.pop(), label="two_cell_reveal", debug=f"A{sc_a} B{sc_b}")
 
-                if solver_cell_a.num_remaining_mines - solver_cell_b.num_remaining_mines == len(unknown_a_not_b):
-                    # The only way for there to be room for all of A's remaining mines is if every unknown cell
-                    # neighboring A but not B is a mine
-                    return Move(minefield.flag_cell, *unknown_a_not_b.pop(), label="two_cell_flag", 
-                                debug=f"A{solver_cell_a} B{solver_cell_b}")
+    # Build frontier and interior unknown cell sets
+    frontier_unknowns = set()
+    for sc in number_cells:
+        frontier_unknowns.update(sc.unknown_neighbors)
 
-                if solver_cell_a.num_remaining_mines == solver_cell_b.num_remaining_mines and \
-                    solver_cell_a.unknown_neighbors > solver_cell_b.unknown_neighbors:
-                    # A and B have the same number of remaining mines and B's unknown neighbors are a strict subset of 
-                    # A's. Since all of B's remaining mines must also neighbor A, every unknown cell neighboring A but 
-                    # not B is safe.
-                    return Move(minefield.reveal_cell, *unknown_a_not_b.pop(), label="two_cell_reveal", 
-                                debug=f"A{solver_cell_a} B{solver_cell_b}")
+    interior_unknowns = all_unknown - frontier_unknowns
 
-    # Look for a low risk guess
-    all_unknown = [(x, y) for x, y, cell in minefield.cords_and_cells if cell.state == CellState.UNKNOWN]
-    base_risk = (minefield.num_mines - minefield.count_cells_with_state(CellState.FLAGGED)) / len(all_unknown)
-    best_risk = base_risk  # Start with the worst case risk
-    best_guess = None
+    # Partition frontier unknowns into connected components
+    cell_to_number_cells = defaultdict(list)
+    for sc in number_cells:
+        for cell_coord in sc.unknown_neighbors:
+            cell_to_number_cells[cell_coord].append(sc)
 
-    for solver_cell in number_cells_with_unknown_neighbors:
-        neighbor_risk = solver_cell.num_remaining_mines / len(solver_cell.unknown_neighbors)
-        if neighbor_risk < best_risk:
-            # Neighbors of this cell have a lower risk than what has been observed so far
-            for candidate_x, candidate_y in solver_cell.unknown_neighbors:
-                # Make sure the candidate guess hasn't had its risk influenced by another neighboring number
-                if count_neighboring_numbers(minefield, candidate_x, candidate_y) == 1:
-                    best_guess = (candidate_x, candidate_y)
-                    best_risk = neighbor_risk
+    adjacency = defaultdict(set)
+    for sc in number_cells:
+        neighbors_list = list(sc.unknown_neighbors)
+        for i in range(len(neighbors_list)):
+            for j in range(i + 1, len(neighbors_list)):
+                c1, c2 = neighbors_list[i], neighbors_list[j]
+                adjacency[c1].add(c2)
+                adjacency[c2].add(c1)
+
+    visited_frontier = set()
+    components = []
+
+    for cell_coord in frontier_unknowns:
+        if cell_coord not in visited_frontier:
+            comp_cells = []
+            queue = [cell_coord]
+            visited_frontier.add(cell_coord)
+            while queue:
+                curr = queue.pop()
+                comp_cells.append(curr)
+                for neighbor in adjacency[curr]:
+                    if neighbor not in visited_frontier:
+                        visited_frontier.add(neighbor)
+                        queue.append(neighbor)
+            components.append(comp_cells)
+
+    total_flags = minefield.count_cells_with_state(CellState.FLAGGED)
+    remaining_total_mines = minefield.num_mines - total_flags
+
+    # For each component, find all valid mine assignments via constraint-pruned backtracking
+    comp_results = []
+
+    for comp_cells in components:
+        comp_cells_set = set(comp_cells)
+        comp_scs = [sc for sc in number_cells if sc.unknown_neighbors & comp_cells_set]
+
+        # Build local constraints for backtracking
+        cell_to_idx = {coord: idx for idx, coord in enumerate(comp_cells)}
+
+        constraints = []
+        for sc in comp_scs:
+            indices = [cell_to_idx[c] for c in sc.unknown_neighbors if c in comp_cells_set]
+            constraints.append((sc.num_remaining_mines, indices))
+
+        cell_constraints = [[] for _ in range(len(comp_cells))]
+        for constr_idx, (rem_mines, indices) in enumerate(constraints):
+            for idx in indices:
+                cell_constraints[idx].append(constr_idx)
+
+        valid_counts_by_mine_count = defaultdict(int)
+        mine_counts_by_cell_and_mine_count = defaultdict(lambda: [0] * len(comp_cells))
+
+        constr_current = [0] * len(constraints)
+        constr_unassigned = [len(indices) for _, indices in constraints]
+
+        assignment = [0] * len(comp_cells)
+
+        def backtrack(cell_idx, current_mines):
+            if current_mines > remaining_total_mines:
+                return
+
+            if cell_idx == len(comp_cells):
+                valid_counts_by_mine_count[current_mines] += 1
+                for idx, is_mine in enumerate(assignment):
+                    if is_mine:
+                        mine_counts_by_cell_and_mine_count[current_mines][idx] += 1
+                return
+
+            # Try assigning cell_idx = 0 (Safe)
+            can_be_safe = True
+            for constr_idx in cell_constraints[cell_idx]:
+                req, _ = constraints[constr_idx]
+                curr = constr_current[constr_idx]
+                unas = constr_unassigned[constr_idx] - 1
+                if curr + unas < req:
+                    can_be_safe = False
                     break
 
-    if best_guess:
-        return Move(minefield.reveal_cell, *best_guess, label="low_risk_guess", debug=f"{best_risk} vs {base_risk}")
+            if can_be_safe:
+                for constr_idx in cell_constraints[cell_idx]:
+                    constr_unassigned[constr_idx] -= 1
+                assignment[cell_idx] = 0
+                backtrack(cell_idx + 1, current_mines)
+                for constr_idx in cell_constraints[cell_idx]:
+                    constr_unassigned[constr_idx] += 1
 
-    # Pick a corner to guess (which have the best odds of triggering a multi-cell reveal)
-    unknown_corners = [(x, y) for x, y in corners if minefield.get_cell(x, y).state == CellState.UNKNOWN]
+            # Try assigning cell_idx = 1 (Mine)
+            can_be_mine = True
+            for constr_idx in cell_constraints[cell_idx]:
+                req, _ = constraints[constr_idx]
+                curr = constr_current[constr_idx] + 1
+                if curr > req:
+                    can_be_mine = False
+                    break
+
+            if can_be_mine:
+                for constr_idx in cell_constraints[cell_idx]:
+                    constr_current[constr_idx] += 1
+                    constr_unassigned[constr_idx] -= 1
+                assignment[cell_idx] = 1
+                backtrack(cell_idx + 1, current_mines + 1)
+                for constr_idx in cell_constraints[cell_idx]:
+                    constr_current[constr_idx] -= 1
+                    constr_unassigned[constr_idx] += 1
+
+        backtrack(0, 0)
+
+        comp_results.append({
+            'cells': comp_cells,
+            'valid_counts': valid_counts_by_mine_count,
+            'mine_counts_by_cell': mine_counts_by_cell_and_mine_count
+        })
+
+    # Global Combination Across Components & Interior
+    num_components = len(comp_results)
+    num_interior = len(interior_unknowns)
+
+    def combine_components(comp_idx):
+        if comp_idx == num_components:
+            return {(): 1}
+
+        res = {}
+        sub = combine_components(comp_idx + 1)
+        comp_valid_counts = comp_results[comp_idx]['valid_counts']
+
+        for m_count, count in comp_valid_counts.items():
+            for sub_tuple, sub_weight in sub.items():
+                new_tuple = (m_count,) + sub_tuple
+                res[new_tuple] = count * sub_weight
+        return res
+
+    combo_weights = combine_components(0)
+
+    total_board_configs = 0
+    cell_weighted_mine_counts = defaultdict(float)
+    total_interior_mines_weighted = 0.0
+
+    for mine_tuple, comp_weight in combo_weights.items():
+        comp_mines_sum = sum(mine_tuple)
+        rem_for_interior = remaining_total_mines - comp_mines_sum
+
+        if rem_for_interior < 0 or rem_for_interior > num_interior:
+            continue
+
+        interior_combos = nCr(num_interior, rem_for_interior)
+        combo_total_weight = comp_weight * interior_combos
+        if combo_total_weight == 0:
+            continue
+
+        total_board_configs += combo_total_weight
+        total_interior_mines_weighted += combo_total_weight * rem_for_interior
+
+        for k in range(num_components):
+            m_k = mine_tuple[k]
+            m_k_weight_others = (comp_weight // comp_results[k]['valid_counts'][m_k]) * interior_combos
+            cells = comp_results[k]['cells']
+            mine_counts_for_mk = comp_results[k]['mine_counts_by_cell'][m_k]
+            for idx, c in enumerate(cells):
+                cell_weighted_mine_counts[c] += mine_counts_for_mk[idx] * m_k_weight_others
+
+    cell_probabilities = {}
+
+    if total_board_configs > 0:
+        for c in frontier_unknowns:
+            cell_probabilities[c] = cell_weighted_mine_counts[c] / total_board_configs
+
+        interior_prob = (total_interior_mines_weighted / (num_interior * total_board_configs)) if num_interior > 0 else 0.0
+        for c in interior_unknowns:
+            cell_probabilities[c] = interior_prob
+    else:
+        base_risk = max(0.0, min(1.0, remaining_total_mines / max(1, len(all_unknown))))
+        for c in all_unknown:
+            cell_probabilities[c] = base_risk
+
+    # Safe cells (Prob == 0)
+    safe_cells = [c for c, p in cell_probabilities.items() if p <= 1e-12]
+    if safe_cells:
+        selected = safe_cells[0]
+        return Move(minefield.reveal_cell, *selected)
+
+    # Flagged mine cells (Prob == 1)
+    mine_cells = [c for c, p in cell_probabilities.items() if p >= 1.0 - 1e-12]
+    if mine_cells:
+        selected = mine_cells[0]
+        return Move(minefield.flag_cell, *selected)
+
+    # Forced Guessing: find lowest risk cells
+    min_prob = min(cell_probabilities.values())
+    candidate_guesses = [c for c, p in cell_probabilities.items() if abs(p - min_prob) <= 1e-9]
+
+    # Prioritized Tie-Breaking Heuristics:
+    # Heuristic 1: Corners
+    unknown_corners = [c for c in candidate_guesses if c in corners]
     if unknown_corners:
-        return Move(minefield.reveal_cell, *choice(unknown_corners), label="corner_guess", debug=base_risk)
+        return Move(minefield.reveal_cell, *choice(unknown_corners), label="corner_guess", debug=f"prob={min_prob:.4f}")
 
-    # Take a guess by revealing a random cell; preferably one not neighboring a revealed number
-    unknown_no_number_neighbors = [(x, y) for x, y in all_unknown if count_neighboring_numbers(minefield, x, y) == 0]
-    if unknown_no_number_neighbors:
-        return Move(minefield.reveal_cell, *choice(unknown_no_number_neighbors), label="greenfield_guess", debug=base_risk)
+    # Heuristic 2: Greenfield / Interior cells
+    greenfield_candidates = [c for c in candidate_guesses if count_neighboring_numbers(minefield, *c) == 0]
+    if greenfield_candidates:
+        return Move(minefield.reveal_cell, *choice(greenfield_candidates), label="greenfield_guess", debug=f"prob={min_prob:.4f}")
 
-    return Move(minefield.reveal_cell, *choice(all_unknown), label="fallback_guess", debug=base_risk)
+    # Heuristic 3: Low risk guess adjacent to numbers with maximum reveal potential
+    best_guess = candidate_guesses[0]
+    max_num_neighbors = -1
+
+    for c in candidate_guesses:
+        num_neighbors = count_neighboring_numbers(minefield, *c)
+        if num_neighbors > max_num_neighbors:
+            max_num_neighbors = num_neighbors
+            best_guess = c
+
+    return Move(minefield.reveal_cell, *best_guess, label="low_risk_guess", debug=f"prob={min_prob:.4f}")
 
 
 def solve_game(minefield):
@@ -199,7 +386,6 @@ def solve_game(minefield):
                         summary += f"of which {metrics['all_guesses']} were guesses."
                     if minefield.state == GameState.LOST:
                         summary += " The last guess went poorly."
-                        # Extra metric for the solver harness to aggregate causes of lost games
                         metrics[f"killed_by_{move.label}"] = 1
                     echo(summary)
 
