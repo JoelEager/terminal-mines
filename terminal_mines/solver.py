@@ -143,6 +143,17 @@ def pick_move(minefield):
         comp_cells_set = set(comp_cells)
         comp_scs = [sc for sc in number_cells if sc.unknown_neighbors & comp_cells_set]
 
+        # Calculate constraint degree & tightness for MRV variable ordering
+        cell_scores = {}
+        for c in comp_cells:
+            scs = [sc for sc in comp_scs if c in sc.unknown_neighbors]
+            degree = len(scs)
+            tightness = sum(1.0 / len(sc.unknown_neighbors & comp_cells_set) for sc in scs)
+            cell_scores[c] = (degree, tightness)
+
+        # Order comp_cells descending so most constrained variables are assigned first
+        comp_cells.sort(key=lambda c: cell_scores[c], reverse=True)
+
         # Build local constraints for backtracking
         cell_to_idx = {coord: idx for idx, coord in enumerate(comp_cells)}
 
@@ -213,6 +224,15 @@ def pick_move(minefield):
                     constr_unassigned[constr_idx] += 1
 
         backtrack(0, 0)
+
+        total_comp_valid = sum(valid_counts_by_mine_count.values())
+        if total_comp_valid > 0:
+            for idx, c in enumerate(comp_cells):
+                cell_mines = sum(mine_counts_by_cell_and_mine_count[m][idx] for m in valid_counts_by_mine_count)
+                if cell_mines == 0:
+                    return Move(minefield.reveal_cell, *c, label="exact_prob_safe")
+                if cell_mines == total_comp_valid:
+                    return Move(minefield.flag_cell, *c, label="exact_prob_mine")
 
         comp_results.append({
             'cells': comp_cells,
