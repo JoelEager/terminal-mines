@@ -3,8 +3,8 @@ A command-line variant of Minesweeper in Python.
 
 ![Screenshot](https://raw.githubusercontent.com/JoelEager/terminal-mines/master/screenshot.png "A game in progress")
 
-Supports Linux, Mac, and Windows on Python 3.4 or newer. Can be played in most terminal emulators that support colors. 
-Includes options for custom difficulties and user-specified mine placements.
+Supports Linux, Mac, and Windows on Python 3.6 or newer. Can be played in most terminal emulators that support colors. 
+Includes support for custom difficulties and a simple AI that you can watch attempt to solve the generated board.
 
 Once installed, use the `mines` command to start a new game.
 
