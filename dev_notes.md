@@ -7,12 +7,12 @@ Check package description extraction: `python setup.py --long-description`
 Win rates:
 | Difficulty | Optimal play | exact-prob-solver | v2.1 | v2.0 | v1.5 |
 | --- | --- | --- | --- | --- | --- |
-| balanced | 90% | ~90% | 90% | 87% | 78% |
-| challenging | 80% | ~82% | 80% | 73% | 55% |
-| max | 65% | ~60% | 60% | 52% | 19% |
-| beginner | 92% | ~92% | 91% | 86% | 77% |
-| intermediate | 78% | ~78% | 74% | 69% | 42% |
-| expert | 40% | ~40% | 28% | 18% | 1% |
+| balanced | 90% | 90% | 90% | 87% | 78% |
+| challenging | 80% | 82% | 80% | 73% | 55% |
+| max | 65% | 64% | 60% | 52% | 19% |
+| beginner | 92% | 92% | 91% | 86% | 77% |
+| intermediate | 78% | 78% | 74% | 69% | 42% |
+| expert | 40% | 38% | 28% | 18% | 1% |
 
 (Measured over at least 3,000 iterations targeting a precision of +/- ~1%. Optimal play win rates from minesweeper.online.)
 

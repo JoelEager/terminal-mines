@@ -230,9 +230,9 @@ def pick_move(minefield):
             for idx, c in enumerate(comp_cells):
                 cell_mines = sum(mine_counts_by_cell_and_mine_count[m][idx] for m in valid_counts_by_mine_count)
                 if cell_mines == 0:
-                    return Move(minefield.reveal_cell, *c, label="exact_prob_safe")
+                    return Move(minefield.reveal_cell, *c, label="exact_prob_early_safe")
                 if cell_mines == total_comp_valid:
-                    return Move(minefield.flag_cell, *c, label="exact_prob_mine")
+                    return Move(minefield.flag_cell, *c, label="exact_prob_early_mine")
 
         comp_results.append({
             'cells': comp_cells,
@@ -323,12 +323,7 @@ def pick_move(minefield):
     if unknown_corners:
         return Move(minefield.reveal_cell, *choice(unknown_corners), label="corner_guess", debug=f"prob={min_prob:.4f}")
 
-    # Heuristic 2: Greenfield / Interior cells
-    greenfield_candidates = [c for c in candidate_guesses if count_neighboring_numbers(minefield, *c) == 0]
-    if greenfield_candidates:
-        return Move(minefield.reveal_cell, *choice(greenfield_candidates), label="greenfield_guess", debug=f"prob={min_prob:.4f}")
-
-    # Heuristic 3: Low risk guess adjacent to numbers with maximum reveal potential
+    # Heuristic 2: Low risk guess adjacent to numbers with maximum reveal potential
     best_guess = candidate_guesses[0]
     max_num_neighbors = -1
 
