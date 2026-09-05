@@ -52,68 +52,124 @@ class MineSet:
         return f"MineSet(n={len(self.cells)}, m={self.mines}, derived={self.is_derived})"
 
 
+def scan_minefield(minefield):
+    """
+    Scans the board once to categorize cells, build base MineSets, and count global state.
+    Returns (base_sets, all_unknown_list, global_flags, number_neighbor_counts).
+    """
+    rows = minefield.rows
+    width = minefield.width
+    height = minefield.height
+
+    all_unknown = []
+    global_flags = 0
+    base_sets = []
+    number_neighbor_counts = defaultdict(int)
+
+    for y in range(height):
+        row = rows[y]
+        for x in range(width):
+            cell = row[x]
+            st = cell.state
+            if st == CellState.UNKNOWN:
+                all_unknown.append((x, y))
+            elif st == CellState.FLAGGED:
+                global_flags += 1
+            elif st.value.isdigit():
+                val = int(st.value)
+                unknown_neighbors = []
+                num_flagged_neighbors = 0
+
+                # Check neighbors directly for efficiency
+                for ox, oy in ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)):
+                    nx, ny = x + ox, y + oy
+                    if 0 <= nx < width and 0 <= ny < height:
+                        number_neighbor_counts[(nx, ny)] += 1
+                        nst = rows[ny][nx].state
+                        if nst == CellState.UNKNOWN:
+                            unknown_neighbors.append((nx, ny))
+                        elif nst == CellState.FLAGGED:
+                            num_flagged_neighbors += 1
+
+                if unknown_neighbors:
+                    remaining_mines = val - num_flagged_neighbors
+                    base_sets.append(MineSet(frozenset(unknown_neighbors), remaining_mines, is_derived=False))
+
+    return base_sets, all_unknown, global_flags, number_neighbor_counts
+
+
 def get_known_sets(minefield):
     """
     Builds the initial list of sets from revealed number cells on the board.
     """
-    sets = []
-    for x, y, cell in minefield.cords_and_cells:
-        if cell.state.value.isdigit():
-            unknown_neighbors = []
-            num_flagged_neighbors = 0
-            for neighbor_x, neighbor_y in minefield.neighboring_cords(x, y):
-                neighbor = minefield.get_cell(neighbor_x, neighbor_y)
-                if neighbor.state == CellState.UNKNOWN:
-                    unknown_neighbors.append((neighbor_x, neighbor_y))
-                elif neighbor.state == CellState.FLAGGED:
-                    num_flagged_neighbors += 1
-
-            if unknown_neighbors:
-                remaining_mines = int(cell.state.value) - num_flagged_neighbors
-                sets.append(MineSet(frozenset(unknown_neighbors), remaining_mines, is_derived=False))
-    return sets
+    base_sets, _, _, _ = scan_minefield(minefield)
+    return base_sets
 
 
-def build_all_sets(minefield):
+def build_all_sets(sets):
     """
-    Derives new sets by pairwise subset reductions iteratively.
+    Derives new sets by pairwise subset reductions iteratively, using cell indexing.
     """
-    sets = get_known_sets(minefield)
+    sets = list(sets)
     seen = {s.cells for s in sets}
+
+    # Index sets by their cells
+    cell_to_sets = defaultdict(list)
+    for index, s in enumerate(sets):
+        for cell in s.cells:
+            cell_to_sets[cell].append(index)
 
     added = True
     while added:
         added = False
         new_sets = []
-        n = len(sets)
-        for i in range(n):
-            for j in range(i + 1, n):
-                s1, s2 = sets[i], sets[j]
-                if s1.cells < s2.cells:
-                    diff_cells = s2.cells - s1.cells
-                    if diff_cells not in seen:
-                        seen.add(diff_cells)
-                        new_sets.append(MineSet(diff_cells, s2.mines - s1.mines, is_derived=True))
-                        added = True
-                elif s2.cells < s1.cells:
-                    diff_cells = s1.cells - s2.cells
-                    if diff_cells not in seen:
-                        seen.add(diff_cells)
-                        new_sets.append(MineSet(diff_cells, s1.mines - s2.mines, is_derived=True))
-                        added = True
+
+        # Find overlapping set pairs using cell index
+        candidate_pairs = set()
+        for c_sets in cell_to_sets.values():
+            n = len(c_sets)
+            for i in range(n):
+                idx1 = c_sets[i]
+                for j in range(i + 1, n):
+                    idx2 = c_sets[j]
+                    if idx1 < idx2:
+                        candidate_pairs.add((idx1, idx2))
+                    else:
+                        candidate_pairs.add((idx2, idx1))
+
+        for i, j in candidate_pairs:
+            s1, s2 = sets[i], sets[j]
+            if s1.cells < s2.cells:
+                diff_cells = s2.cells - s1.cells
+                if diff_cells not in seen:
+                    seen.add(diff_cells)
+                    new_set = MineSet(diff_cells, s2.mines - s1.mines, is_derived=True)
+                    new_sets.append(new_set)
+                    added = True
+            elif s2.cells < s1.cells:
+                diff_cells = s1.cells - s2.cells
+                if diff_cells not in seen:
+                    seen.add(diff_cells)
+                    new_set = MineSet(diff_cells, s1.mines - s2.mines, is_derived=True)
+                    new_sets.append(new_set)
+                    added = True
 
         if new_sets:
+            start_index = len(sets)
             sets.extend(new_sets)
+            for idx, ns in enumerate(new_sets, start=start_index):
+                for cell in ns.cells:
+                    cell_to_sets[cell].append(idx)
 
     return sets
 
 
-def find_deductive_move(minefield):
+def find_deductive_move(minefield, base_sets, all_unknown_frozenset, global_flags):
     """
     Attempts to find a guaranteed move using set deductions and global disjoint union analysis.
     Returns a Move object or None if no deterministic move can be made.
     """
-    sets = build_all_sets(minefield)
+    sets = build_all_sets(base_sets)
 
     # 1. Single Set Deductions (includes base and derived subset differences)
     for s in sets:
@@ -129,42 +185,54 @@ def find_deductive_move(minefield):
             return Move(minefield.reveal_cell, *target_cell, label=label, debug=f"set={s}")
 
     # 2. Pairwise Set Wing / Overlap Deductions
-    for i in range(len(sets)):
-        s1 = sets[i]
-        for j in range(i + 1, len(sets)):
-            s2 = sets[j]
-            common = s1.cells & s2.cells
-            if not common:
-                continue
-            w1 = s1.cells - common
-            w2 = s2.cells - common
+    cell_to_sets = defaultdict(list)
+    for index, s in enumerate(sets):
+        for cell in s.cells:
+            cell_to_sets[cell].append(index)
 
-            diff1 = s1.mines - s2.mines
-            if len(w1) == diff1:
-                if w1:
-                    target_cell = next(iter(w1))
-                    return Move(minefield.flag_cell, *target_cell, label="two_set_flag", debug=f"s1={s1}, s2={s2}")
-                if w2:
-                    target_cell = next(iter(w2))
-                    return Move(minefield.reveal_cell, *target_cell, label="two_set_reveal", debug=f"s1={s1}, s2={s2}")
+    candidate_pairs = set()
+    for c_sets in cell_to_sets.values():
+        n = len(c_sets)
+        for i in range(n):
+            idx1 = c_sets[i]
+            for j in range(i + 1, n):
+                if idx1 < c_sets[j]:
+                    candidate_pairs.add((idx1, c_sets[j]))
+                else:
+                    candidate_pairs.add((c_sets[j], idx1))
 
-            diff2 = s2.mines - s1.mines
-            if len(w2) == diff2:
-                if w2:
-                    target_cell = next(iter(w2))
-                    return Move(minefield.flag_cell, *target_cell, label="two_set_flag", debug=f"s1={s1}, s2={s2}")
-                if w1:
-                    target_cell = next(iter(w1))
-                    return Move(minefield.reveal_cell, *target_cell, label="two_set_reveal", debug=f"s1={s1}, s2={s2}")
+    for i, j in candidate_pairs:
+        s1, s2 = sets[i], sets[j]
+        common = s1.cells & s2.cells
+        if not common:
+            continue
+        w1 = s1.cells - common
+        w2 = s2.cells - common
+
+        diff1 = s1.mines - s2.mines
+        if len(w1) == diff1:
+            if w1:
+                target_cell = next(iter(w1))
+                return Move(minefield.flag_cell, *target_cell, label="two_set_flag", debug=f"s1={s1}, s2={s2}")
+            if w2:
+                target_cell = next(iter(w2))
+                return Move(minefield.reveal_cell, *target_cell, label="two_set_reveal", debug=f"s1={s1}, s2={s2}")
+
+        diff2 = s2.mines - s1.mines
+        if len(w2) == diff2:
+            if w2:
+                target_cell = next(iter(w2))
+                return Move(minefield.flag_cell, *target_cell, label="two_set_flag", debug=f"s1={s1}, s2={s2}")
+            if w1:
+                target_cell = next(iter(w1))
+                return Move(minefield.reveal_cell, *target_cell, label="two_set_reveal", debug=f"s1={s1}, s2={s2}")
 
     # 3. Global Disjoint Union Deductions
-    all_unknown = frozenset((x, y) for x, y, cell in minefield.cords_and_cells if cell.state == CellState.UNKNOWN)
-    flagged_count = minefield.count_cells_with_state(CellState.FLAGGED)
-    global_mines_left = minefield.num_mines - flagged_count
-    global_squares_left = len(all_unknown)
+    global_mines_left = minefield.num_mines - global_flags
+    global_squares_left = len(all_unknown_frozenset)
 
     if global_squares_left > 0 and (global_mines_left == 0 or global_mines_left == global_squares_left):
-        target_cell = next(iter(all_unknown))
+        target_cell = next(iter(all_unknown_frozenset))
         if global_mines_left == 0:
             return Move(minefield.reveal_cell, *target_cell, label="union_reveal")
         else:
@@ -188,10 +256,10 @@ def find_deductive_move(minefield):
             outside_mines = global_mines_left - current_mines
             if outside_squares > 0:
                 if outside_mines == 0:
-                    outside_cells = all_unknown - current_union_cells
+                    outside_cells = all_unknown_frozenset - current_union_cells
                     return Move(minefield.reveal_cell, *next(iter(outside_cells)), label="backtrack_reveal")
                 elif outside_mines == outside_squares:
-                    outside_cells = all_unknown - current_union_cells
+                    outside_cells = all_unknown_frozenset - current_union_cells
                     return Move(minefield.flag_cell, *next(iter(outside_cells)), label="backtrack_flag")
             return None
 
@@ -221,30 +289,30 @@ def pick_move(minefield):
     if minefield.first_move:
         return Move(minefield.reveal_cell, *choice(corners))
 
+    # Single scan of the minefield to gather all required state
+    base_sets, all_unknown, global_flags, number_neighbor_counts = scan_minefield(minefield)
+    all_unknown_frozenset = frozenset(all_unknown)
+
     # Attempt deductive analysis
-    deductive_move = find_deductive_move(minefield)
+    deductive_move = find_deductive_move(minefield, base_sets, all_unknown_frozenset, global_flags)
     if deductive_move:
         return deductive_move
 
-    # Look for a low risk guess based on boundary unknown cells
-    all_unknown = [(x, y) for x, y, cell in minefield.cords_and_cells if cell.state == CellState.UNKNOWN]
     if not all_unknown:
         return None
 
-    global_flags = minefield.count_cells_with_state(CellState.FLAGGED)
     global_mines_left = max(0, minefield.num_mines - global_flags)
     base_risk = global_mines_left / len(all_unknown)
     best_risk = base_risk
     best_guess = None
 
-    sets = get_known_sets(minefield)
-    for s in sets:
+    for s in base_sets:
         if s.cells and len(s.cells) > 0:
             neighbor_risk = s.mines / len(s.cells)
             if neighbor_risk < best_risk:
-                for candidate_x, candidate_y in s.cells:
-                    if count_neighboring_numbers(minefield, candidate_x, candidate_y) == 1:
-                        best_guess = (candidate_x, candidate_y)
+                for candidate in s.cells:
+                    if number_neighbor_counts[candidate] == 1:
+                        best_guess = candidate
                         best_risk = neighbor_risk
                         break
 
@@ -252,12 +320,13 @@ def pick_move(minefield):
         return Move(minefield.reveal_cell, *best_guess, label="low_risk_guess", debug=f"{best_risk} vs {base_risk}")
 
     # Pick an unknown corner if available
-    unknown_corners = [(x, y) for x, y in corners if minefield.get_cell(x, y).state == CellState.UNKNOWN]
+    rows = minefield.rows
+    unknown_corners = [(x, y) for x, y in corners if rows[y][x].state == CellState.UNKNOWN]
     if unknown_corners:
         return Move(minefield.reveal_cell, *choice(unknown_corners), label="corner_guess", debug=base_risk)
 
     # Greenfield guess (cell not neighboring any revealed number)
-    unknown_no_number_neighbors = [(x, y) for x, y in all_unknown if count_neighboring_numbers(minefield, x, y) == 0]
+    unknown_no_number_neighbors = [pt for pt in all_unknown if number_neighbor_counts[pt] == 0]
     if unknown_no_number_neighbors:
         return Move(minefield.reveal_cell, *choice(unknown_no_number_neighbors), label="greenfield_guess", debug=base_risk)
 
