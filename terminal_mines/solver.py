@@ -1,5 +1,5 @@
 """
-A Minesweeper board solver using set-based deduction and disjoint union analysis
+This branch implements an optimal Minesweeper board solver using set-based deduction and disjoint union analysis.
 
 Selects moves by deductive analysis (set differences, subset reductions, and global disjoint unions)
 with probabilistic calculations for guesses when no deduction is possible. Includes a gameplay animation loop.
@@ -121,11 +121,11 @@ def find_deductive_move(minefield):
             continue
         if len(s.cells) == s.mines:
             target_cell = next(iter(s.cells))
-            label = "two_cell_flag" if s.is_derived else None
+            label = "single_derived_set_flag" if s.is_derived else "single_base_set_flag"
             return Move(minefield.flag_cell, *target_cell, label=label, debug=f"set={s}")
         if s.mines == 0:
             target_cell = next(iter(s.cells))
-            label = "two_cell_reveal" if s.is_derived else None
+            label = "single_derived_set_reveal" if s.is_derived else "single_base_set_reveal"
             return Move(minefield.reveal_cell, *target_cell, label=label, debug=f"set={s}")
 
     # 2. Pairwise Set Wing / Overlap Deductions
@@ -143,19 +143,19 @@ def find_deductive_move(minefield):
             if len(w1) == diff1:
                 if w1:
                     target_cell = next(iter(w1))
-                    return Move(minefield.flag_cell, *target_cell, label="two_cell_flag", debug=f"s1={s1}, s2={s2}")
+                    return Move(minefield.flag_cell, *target_cell, label="two_set_flag", debug=f"s1={s1}, s2={s2}")
                 if w2:
                     target_cell = next(iter(w2))
-                    return Move(minefield.reveal_cell, *target_cell, label="two_cell_reveal", debug=f"s1={s1}, s2={s2}")
+                    return Move(minefield.reveal_cell, *target_cell, label="two_set_reveal", debug=f"s1={s1}, s2={s2}")
 
             diff2 = s2.mines - s1.mines
             if len(w2) == diff2:
                 if w2:
                     target_cell = next(iter(w2))
-                    return Move(minefield.flag_cell, *target_cell, label="two_cell_flag", debug=f"s1={s1}, s2={s2}")
+                    return Move(minefield.flag_cell, *target_cell, label="two_set_flag", debug=f"s1={s1}, s2={s2}")
                 if w1:
                     target_cell = next(iter(w1))
-                    return Move(minefield.reveal_cell, *target_cell, label="two_cell_reveal", debug=f"s1={s1}, s2={s2}")
+                    return Move(minefield.reveal_cell, *target_cell, label="two_set_reveal", debug=f"s1={s1}, s2={s2}")
 
     # 3. Global Disjoint Union Deductions
     all_unknown = frozenset((x, y) for x, y, cell in minefield.cords_and_cells if cell.state == CellState.UNKNOWN)
@@ -166,9 +166,9 @@ def find_deductive_move(minefield):
     if global_squares_left > 0 and (global_mines_left == 0 or global_mines_left == global_squares_left):
         target_cell = next(iter(all_unknown))
         if global_mines_left == 0:
-            return Move(minefield.reveal_cell, *target_cell, label="two_cell_reveal")
+            return Move(minefield.reveal_cell, *target_cell, label="union_reveal")
         else:
-            return Move(minefield.flag_cell, *target_cell, label="two_cell_flag")
+            return Move(minefield.flag_cell, *target_cell, label="union_flag")
 
     # Limit search for disjoint union combinations
     active_sets = [s for s in sets if s.cells and 0 < s.mines < len(s.cells)]
@@ -189,10 +189,10 @@ def find_deductive_move(minefield):
             if outside_squares > 0:
                 if outside_mines == 0:
                     outside_cells = all_unknown - current_union_cells
-                    return Move(minefield.reveal_cell, *next(iter(outside_cells)), label="two_cell_reveal")
+                    return Move(minefield.reveal_cell, *next(iter(outside_cells)), label="backtrack_reveal")
                 elif outside_mines == outside_squares:
                     outside_cells = all_unknown - current_union_cells
-                    return Move(minefield.flag_cell, *next(iter(outside_cells)), label="two_cell_flag")
+                    return Move(minefield.flag_cell, *next(iter(outside_cells)), label="backtrack_flag")
             return None
 
         s = candidate_sets[index]
@@ -277,8 +277,6 @@ def solve_game(minefield):
 
             # Make a move
             move = pick_move(minefield)
-            if not move:
-                break
             move.func(move.x, move.y)
 
             # Update the selected cell to indicate the move the AI just made
