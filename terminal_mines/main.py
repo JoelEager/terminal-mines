@@ -4,7 +4,7 @@ Entry point and CLI implementation for Terminal Mines.
 
 import click
 
-from .game_model import random_minefield, GameState
+from .game_model import CellState, random_minefield, GameState
 from .keyboard_listener import input_loop
 from .renderer import terminal_renderer
 from .solver import solve_game
@@ -60,6 +60,7 @@ def main(ctx, difficulty, solve):
     Controls:
     - WASD or arrow keys to move the cursor
     - Enter or space to reveal the current cell
+      (Or if already revealed, then reveal its neighbors)
     - e or ' to place a flag
     - ESC to quit
 
@@ -94,9 +95,9 @@ def main(ctx, difficulty, solve):
                 elif key == "d":
                     minefield.x = (minefield.x + 1) % minefield.width
                 elif key == "e" or key == "'":
-                    minefield.flag_cell(minefield.x, minefield.y)
+                    minefield.flag_cell()
                 elif key == "\n" or key == " ":
-                    minefield.reveal_cell(minefield.x, minefield.y)
+                    minefield.reveal_cell()
 
                 render(minefield)
 

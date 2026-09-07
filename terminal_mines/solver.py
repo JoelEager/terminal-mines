@@ -163,11 +163,9 @@ def solve_game(minefield):
 
             # Make a move
             move = pick_move(minefield)
-            move.func(move.x, move.y)
-
-            # Update the selected cell to indicate the move the AI just made
             minefield.x = move.x
             minefield.y = move.y
+            move.func()
 
             # Render the updated game state
             render(minefield)
