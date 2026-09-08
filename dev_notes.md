@@ -23,6 +23,8 @@ Strategies implemented:
 
 Additionally, per-move processing time for v2.0 and v2.1 is less than half of what it was for v1.5.
 
+**Summary of alternate solver implementation testing:** exact-prob-solver is the only one to achieve optimal win rates but its worst case solve time is terrible even after optimization. complex-solver and set-union-solver have similar win rates that are only a bit better than v2.1. set-union-solver has the best performance by far and complex-solver has the least code. (Each of these versions are available as branches in the repo for further testing and review.) I decided to stick with the simple solver as implemented in v2.1 for the release implementation since that balances code readability with win rate. This project's use case of displaying an automated attempt at the puzzle is best served by something the makes understandable moves.
+
 ### Tooling Usage
 Run the solver in debug mode:
 ```sh
