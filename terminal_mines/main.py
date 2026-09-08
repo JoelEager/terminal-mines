@@ -65,7 +65,7 @@ def main(ctx, difficulty, solve):
     - e or ' to place a flag
     - ESC to quit
 
-    After you place the indicated number of flags around a number cell you can reveal it a second time to uncover all 
+    After you place the indicated number of flags around a number cell you can reveal it a second time to uncover all
     of the remaining unrevealed neighbors in one action. (This is called "chording" in other Minesweeper implementations.)
 
     DIFFICULTY can either be one of the modes listed below or a custom difficulty of the form
