@@ -16,12 +16,7 @@ Win rates:
 
 (Measured over at least 3,000 iterations targeting a precision of +/- ~1%. Optimal play win rates from minesweeper.online.)
 
-Strategies implemented:
-- **v2.1**: Simple deduction, two cell overlap flag, two cell subset reveal, low risk guess, corner guess, greenfield guess, corner start
-- **v2.0**: Simple deduction, two cell subset (flag and reveal), low risk guess, greenfield guess, corner start
-- **v1.5**: Simple deduction, corner guess, corner start
-
-Additionally, per-move processing time for v2.0 and v2.1 is less than half of what it was for v1.5.
+This branch has a worst case solve time approximately 8 times that of v2.1.
 
 ### Tooling Usage
 Run the solver in debug mode:

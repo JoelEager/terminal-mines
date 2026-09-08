@@ -1,5 +1,5 @@
 """
-This branch implements an optimal Minesweeper board solver using set-based deduction and disjoint union analysis.
+This branch implements a Minesweeper board solver using set-based deduction and disjoint union analysis.
 
 Selects moves by deductive analysis (set differences, subset reductions, and global disjoint unions)
 with probabilistic calculations for guesses when no deduction is possible. Includes a gameplay animation loop.
