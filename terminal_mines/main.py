@@ -2,9 +2,11 @@
 Entry point and CLI implementation for Terminal Mines.
 """
 
+from time import perf_counter
+
 import click
 
-from .game_model import CellState, random_minefield, GameState
+from .game_model import random_minefield, GameState
 from .keyboard_listener import input_loop
 from .renderer import terminal_renderer
 from .solver import solve_game
@@ -85,6 +87,9 @@ def main(ctx, difficulty, solve):
         solve_game(minefield)
     else:
         with terminal_renderer() as render:
+            render(minefield)
+            start_time = perf_counter()
+
             def handle_key(key):
                 if key == "w":
                     minefield.y = (minefield.y - 1) % minefield.height
@@ -99,10 +104,9 @@ def main(ctx, difficulty, solve):
                 elif key == "\n" or key == " ":
                     minefield.reveal_cell()
 
-                render(minefield)
+                render(minefield, start_time)
 
                 if minefield.state != GameState.IN_PROGRESS:
                     ctx.exit(0)
 
-            render(minefield)
             input_loop(handle_key)

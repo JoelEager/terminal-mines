@@ -5,6 +5,7 @@ Handles the rendering of the game state to the terminal.
 from contextlib import contextmanager
 from itertools import chain
 from shutil import get_terminal_size
+from time import perf_counter
 
 from click import style, echo, get_current_context
 
@@ -44,7 +45,7 @@ def style_cell(minefield, x, y):
     return style(cell.state.value, bg=bg, fg=fg)
 
 
-def generate_lines(minefield):
+def generate_lines(minefield, start_time):
     """
     Generator to construct each line of the game board followed by the status message.
     """
@@ -60,7 +61,11 @@ def generate_lines(minefield):
     yield chr(0x2514) + chr(0x2500) * (minefield.width * 2 + 1) + chr(0x2518)
 
     if minefield.state == GameState.WON:
-        yield " Game won"
+        if start_time is not None:
+            end_time = perf_counter()
+            yield f" Game won in {end_time - start_time:.0f} seconds"
+        else:
+            yield " Game won"
     elif minefield.state == GameState.LOST:
         yield " Game lost"
     elif minefield.first_move:
@@ -76,13 +81,13 @@ def generate_lines(minefield):
 def terminal_renderer(overwrite=True):
     """
     Setup and tear down game rendering via ANSI escape sequences. If overwrite is disabled then previous game frames 
-    will be left in the scrollback buffer.
+    will be left in the scrollback buffer. Yields the render function.
     """
-    def render(minefield):
+    def render(minefield, start_time=None):
         """
-        Render the current game state to the terminal.
+        Render the given game state to the terminal. The optional start_time can be provided to display time elapsed on win.
         """
-        frame = "\n".join(generate_lines(minefield))
+        frame = "\n".join(generate_lines(minefield, start_time))
         if overwrite:
             frame = "".join([
                 "\033[H",  # Move the cursor to the top-left (home) position
