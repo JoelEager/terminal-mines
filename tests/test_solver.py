@@ -31,7 +31,8 @@ class TestSolverDeterministicStrategies(unittest.TestCase):
         # Reveal (1,0) as WARN1 ('1')
         minefield = Minefield(2, 2, {"0,0"})
         minefield.first_move = False
-        minefield.flag_cell(0, 0)
+        minefield.x, minefield.y = 0, 0
+        minefield.flag_cell()
         minefield.get_cell(1, 0).state = CellState.WARN1
 
         move = pick_move(minefield)

@@ -51,9 +51,12 @@ class TestRenderer(unittest.TestCase):
     @patch("terminal_mines.renderer.echo")
     def test_render_won(self, mock_echo):
         minefield = Minefield(2, 2, {"0,0"})
-        minefield.reveal_cell(1, 0)
-        minefield.reveal_cell(0, 1)
-        minefield.reveal_cell(1, 1)
+        minefield.x, minefield.y = 1, 0
+        minefield.reveal_cell()
+        minefield.x, minefield.y = 0, 1
+        minefield.reveal_cell()
+        minefield.x, minefield.y = 1, 1
+        minefield.reveal_cell()
 
         self.assertEqual(minefield.state, GameState.WON)
         with terminal_renderer() as render:
@@ -65,8 +68,10 @@ class TestRenderer(unittest.TestCase):
     @patch("terminal_mines.renderer.echo")
     def test_render_lost(self, mock_echo):
         minefield = Minefield(2, 2, {"0,0"})
-        minefield.reveal_cell(1, 1)
-        minefield.reveal_cell(0, 0)
+        minefield.x, minefield.y = 1, 1
+        minefield.reveal_cell()
+        minefield.x, minefield.y = 0, 0
+        minefield.reveal_cell()
 
         self.assertEqual(minefield.state, GameState.LOST)
         with terminal_renderer() as render:

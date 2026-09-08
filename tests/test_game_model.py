@@ -68,24 +68,28 @@ class TestMinefield(unittest.TestCase):
         minefield = Minefield(2, 2, {"0,0"})
 
         # Toggle flag ON
-        minefield.flag_cell(0, 1)
+        minefield.x, minefield.y = 0, 1
+        minefield.flag_cell()
         self.assertEqual(minefield.get_cell(0, 1).state, CellState.FLAGGED)
         self.assertEqual(minefield.flags_remaining, 0)
 
         # Try flagging when flags_remaining is 0
-        minefield.flag_cell(1, 0)
+        minefield.x, minefield.y = 1, 0
+        minefield.flag_cell()
         self.assertEqual(minefield.get_cell(1, 0).state, CellState.UNKNOWN)
 
         # Toggle flag OFF
-        minefield.flag_cell(0, 1)
+        minefield.x, minefield.y = 0, 1
+        minefield.flag_cell()
         self.assertEqual(minefield.get_cell(0, 1).state, CellState.UNKNOWN)
         self.assertEqual(minefield.flags_remaining, 1)
 
         # Flag cannot be placed on revealed cell
-        minefield.reveal_cell(1, 1)
+        minefield.x, minefield.y = 1, 1
+        minefield.reveal_cell()
         state_before = minefield.get_cell(1, 1).state
         self.assertNotEqual(state_before, CellState.UNKNOWN)
-        minefield.flag_cell(1, 1)
+        minefield.flag_cell()
         self.assertEqual(minefield.get_cell(1, 1).state, state_before)
 
     def test_reveal_cell_warning_and_win(self):
@@ -93,16 +97,19 @@ class TestMinefield(unittest.TestCase):
         minefield = Minefield(2, 2, {"0,0"})
 
         # First move on non-mine cell (1,0) - neighbor count is 1
-        minefield.reveal_cell(1, 0)
+        minefield.x, minefield.y = 1, 0
+        minefield.reveal_cell()
         self.assertEqual(minefield.get_cell(1, 0).state, CellState.WARN1)
         self.assertEqual(minefield.state, GameState.IN_PROGRESS)
 
         # Reveal remaining non-mine cells (0,1) and (1,1)
-        minefield.reveal_cell(0, 1)
+        minefield.x, minefield.y = 0, 1
+        minefield.reveal_cell()
         self.assertEqual(minefield.get_cell(0, 1).state, CellState.WARN1)
         self.assertEqual(minefield.state, GameState.IN_PROGRESS)
 
-        minefield.reveal_cell(1, 1)
+        minefield.x, minefield.y = 1, 1
+        minefield.reveal_cell()
         self.assertEqual(minefield.get_cell(1, 1).state, CellState.WARN1)
         self.assertEqual(minefield.state, GameState.WON)
 
@@ -111,7 +118,8 @@ class TestMinefield(unittest.TestCase):
         minefield = Minefield(3, 3, {"2,2"})
 
         # Revealing (0,0) should expand recursively to (0,1), (1,0), (1,1) which are safe (0 neighbor mines)
-        minefield.reveal_cell(0, 0)
+        minefield.x, minefield.y = 0, 0
+        minefield.reveal_cell()
 
         self.assertEqual(minefield.get_cell(0, 0).state, CellState.SAFE)
         self.assertEqual(minefield.get_cell(0, 1).state, CellState.SAFE)
@@ -125,7 +133,8 @@ class TestMinefield(unittest.TestCase):
         minefield = Minefield(2, 2, {"0,0"})
 
         # First move is on mine cell (0,0) -> mine relocated to another cell
-        minefield.reveal_cell(0, 0)
+        minefield.x, minefield.y = 0, 0
+        minefield.reveal_cell()
         self.assertFalse(minefield.get_cell(0, 0).is_mine)
         self.assertEqual(minefield.num_mines, 1)
         self.assertEqual(minefield.state, GameState.IN_PROGRESS)
@@ -135,20 +144,23 @@ class TestMinefield(unittest.TestCase):
         minefield = Minefield(2, 2, {"0,0"})
 
         # Make a safe move first so first_move flag is set to False
-        minefield.reveal_cell(1, 1)
+        minefield.x, minefield.y = 1, 1
+        minefield.reveal_cell()
         self.assertEqual(minefield.state, GameState.IN_PROGRESS)
 
         # Now hit mine at (0,0)
-        minefield.reveal_cell(0, 0)
+        minefield.x, minefield.y = 0, 0
+        minefield.reveal_cell()
         self.assertEqual(minefield.get_cell(0, 0).state, CellState.EXPLODED)
         self.assertEqual(minefield.state, GameState.LOST)
 
     def test_reveal_already_revealed_cell(self):
         minefield = Minefield(2, 2, set())
-        minefield.reveal_cell(0, 0)
+        minefield.x, minefield.y = 0, 0
+        minefield.reveal_cell()
         self.assertEqual(minefield.get_cell(0, 0).state, CellState.SAFE)
         # Calling reveal again does nothing
-        minefield.reveal_cell(0, 0)
+        minefield.reveal_cell()
         self.assertEqual(minefield.get_cell(0, 0).state, CellState.SAFE)
 
 
