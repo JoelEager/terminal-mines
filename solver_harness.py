@@ -37,7 +37,10 @@ def worker_func(num_iterations, difficulty, queue):
          patch("terminal_mines.solver.terminal_renderer", dummy_renderer):
         for index in range(num_iterations):
             minefield = random_minefield(*difficulty)
+            start_time = perf_counter()
             metrics = solve_game(minefield)
+            end_time = perf_counter()
+            metrics["solve_time"] = end_time - start_time
             if minefield.state == GameState.WON:
                 metrics["wins"] = 1
             queue.put((metrics, index + 1 == num_iterations))
@@ -76,16 +79,18 @@ def main(ctx, difficulty, iterations):
             worker_processes.append(process)
             active_workers += 1
 
-        start = perf_counter()
+        longest_solve_time = 0
+        start_time = perf_counter()
         while active_workers > 0:
             metrics, is_done = queue.get()
             for metric, count in metrics.items():
                 total_metrics[metric] += count
+            longest_solve_time = max(longest_solve_time, metrics["solve_time"])
             if is_done:
                 active_workers -= 1
             bar.update(1)
 
-        end = perf_counter()
+        end_time = perf_counter()
         for process in worker_processes:
             process.join()
 
@@ -95,7 +100,8 @@ def main(ctx, difficulty, iterations):
     # Print the results
     fmt_iterations = iterations if iterations < 1000 else f"{iterations / 1000}k"
     win_percent = total_metrics["wins"] / iterations * 100
-    click.echo(f"Completed {fmt_iterations} games in {end - start:.1f} seconds. Win rate: {win_percent:.1f}%")
+    click.echo(f"Completed {fmt_iterations} games in {end_time - start_time:.1f} seconds. "
+               f"Worst case solve time: {longest_solve_time:.2f} seconds; Win rate: {win_percent:.1f}%")
     click.echo("Average metrics: " + ", ".join(
         f"{metric}={total / iterations:.2f}" for metric, total in sorted(total_metrics.items())
         if metric != "wins"

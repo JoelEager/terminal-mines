@@ -161,16 +161,12 @@ def solve_game(minefield):
             if not AI_DEBUG_MODE:
                 sleep(0.1)
 
-            # Make a move
             move = pick_move(minefield)
-            minefield.x = move.x
-            minefield.y = move.y
+            minefield.x, minefield.y = move.x, move.y
             move.func()
 
-            # Render the updated game state
             render(minefield)
 
-            # Update the AI metrics
             metrics["moves"] += 1
             if move.label:
                 metrics[move.label] += 1
@@ -181,7 +177,6 @@ def solve_game(minefield):
                     if AI_DEBUG_MODE == "step" or AI_DEBUG_MODE == move.label:
                         pause()
 
-            # Show additional end of game message(s)
             if minefield.state != GameState.IN_PROGRESS:
                 if AI_DEBUG_MODE:
                     echo("\nMetrics:")
