@@ -61,10 +61,12 @@ def main(ctx, difficulty, solve):
     \b
     Controls:
     - WASD or arrow keys to move the cursor
-    - Enter or space to reveal the current cell
-      (Or if already revealed, then reveal its neighbors)
+    - Enter or space to reveal the selected cell
     - e or ' to place a flag
     - ESC to quit
+
+    After you place the indicated number of flags around a number cell you can reveal it a second time to uncover all 
+    of the remaining unrevealed neighbors in one action. (This is called "chording" in other Minesweeper implementations.)
 
     DIFFICULTY can either be one of the modes listed below or a custom difficulty of the form
     "<number of mines>,<width>,<height>". If no difficulty is specified, then Terminal Mines will default to balanced.

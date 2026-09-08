@@ -73,16 +73,6 @@ class Minefield:
                 yield cell
 
     @property
-    def cords_and_cells(self):
-        """
-        Iterates over all cells from left to right followed by top to bottom. Yields a tuple of x pos, y pos, and the
-        cell object.
-        """
-        for y in range(self.height):
-            for x in range(self.width):
-                yield x, y, self.rows[y][x]
-
-    @property
     def num_mines(self):
         return len([cell for cell in self.cells if cell.is_mine])
 
@@ -92,6 +82,16 @@ class Minefield:
     @property
     def flags_remaining(self):
         return self.num_mines - self.count_cells_with_state(CellState.FLAGGED)
+
+    @property
+    def cords_and_cells(self):
+        """
+        Iterates over all cells from left to right followed by top to bottom. Yields a tuple of x pos, y pos, and the
+        cell object.
+        """
+        for y in range(self.height):
+            for x in range(self.width):
+                yield x, y, self.rows[y][x]
 
     def get_cell(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
@@ -128,16 +128,18 @@ class Minefield:
         if recursive_cords:
             x, y = recursive_cords
         else:
-            x = self.x
-            y = self.y
-        target = self.get_cell(x, y)
+            x, y = self.x, self.y
 
-        if not recursive_cords and target.state.value.isdigit():
-            # "cord" (reveal neighboring cells if the initial target is a number)
-            for neighbor_x, neighbor_y in self.neighboring_cords(x, y):
-                self.reveal_cell(recursive_cords=(neighbor_x, neighbor_y))
-        elif target.state != CellState.UNKNOWN:
+        target = self.get_cell(x, y)
+        if recursive_cords and target.state != CellState.UNKNOWN:
             return
+
+        # "chord" (reveal neighboring cells if the selected cell is a number with all flags placed)
+        if not recursive_cords and target.state.value.isdigit():
+            neighbor_flags = len([cell for cell in self.neighbors(x, y) if cell.state == CellState.FLAGGED])
+            if int(target.state.value) == neighbor_flags:
+                for neighbor_x, neighbor_y in self.neighboring_cords(x, y):
+                    self.reveal_cell(recursive_cords=(neighbor_x, neighbor_y))
 
         # If this is the first move, and the target cell is a mine then relocate it to a random cell that does not contain a mine
         if self.first_move:
@@ -148,7 +150,7 @@ class Minefield:
                 if available_cells:
                     choice(available_cells).is_mine = True
 
-        if target.is_mine:
+        if target.is_mine and target.state != CellState.FLAGGED:
             # Game lost; update all un-flagged mines as exploded
             for cell in self.cells:
                 if cell.state == CellState.UNKNOWN and cell.is_mine:
@@ -176,7 +178,6 @@ class Minefield:
                     return
 
             self.state = GameState.WON
-
 
     def flag_cell(self):
         """
